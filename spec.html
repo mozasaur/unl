@@ -54,6 +54,16 @@
       <li><strong>Intuitive:</strong> The syntax is designed to be read naturally.</li>
     </ul>
   </section>
+
+  <section id="conformance">
+    <h2>Conformance</h2>
+    <p>
+      As well as sections marked as non-normative, all authoring guidelines, diagrams, examples, and notes in this specification are non-normative. Everything else in this specification is normative.
+    </p>
+    <p>
+      The key words <em class="rfc2119">MUST</em>, <em class="rfc2119">MUST NOT</em>, <em class="rfc2119">REQUIRED</em>, <em class="rfc2119">SHALL</em>, <em class="rfc2119">SHALL NOT</em>, <em class="rfc2119">SHOULD</em>, <em class="rfc2119">SHOULD NOT</em>, <em class="rfc2119">RECOMMENDED</em>, <em class="rfc2119">NOT RECOMMENDED</em>, <em class="rfc2119">MAY</em>, and <em class="rfc2119">OPTIONAL</em> in this document are to be interpreted as described in BCP 14 [[RFC2119]] [[RFC8174]] when, and only when, they appear in all capitals, as shown here.
+    </p>
+  </section>
   
   <section id="execution-models">
       <h2>Operating Models</h2>
@@ -184,10 +194,10 @@ let result2 = unl.run(anotherQuery);
     <h3>Rules for Quoting</h3>
     <dl>
         <dt>When to Quote</dt>
-        <dd>A name segment MUST be quoted if it contains any special UNL characters or if it is ambiguous with a numeric literal (e.g., a key named "3").</dd>
+        <dd>A name segment <em class="rfc2119">MUST</em> be quoted if it contains any special UNL characters or if it is ambiguous with a numeric literal (e.g., a key named "3").</dd>
         
         <dt>Escaping within Quotes</dt>
-        <dd>To include a quote character within a quoted name, it must be escaped with a backslash (<code>\</code>). A literal backslash must also be escaped (<code>\\</code>).</dd>
+        <dd>To include a quote character within a quoted name, it <em class="rfc2119">MUST</em> be escaped with a backslash (<code>\</code>). A literal backslash <em class="rfc2119">MUST</em> also be escaped (<code>\\</code>).</dd>
     </dl>
     
     <h3>Examples</h3>
@@ -410,6 +420,10 @@ http://example.com/data.zip|decomp:zip/docs/report.xml|xml//title
   <section id="references" class="appendix">
     <h2>References</h2>
     <dl>
+        <dt id="RFC2119">RFC 2119</dt>
+        <dd><a href="https://www.rfc-editor.org/info/rfc2119">Key words for use in RFCs to Indicate Requirement Levels</a>, S. Bradner, IETF, March 1997.</dd>
+        <dt id="RFC8174">RFC 8174</dt>
+        <dd><a href="https://www.rfc-editor.org/info/rfc8174">Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words</a>, B. Leiba, IETF, May 2017.</dd>
         <dt id="W3C-XML">W3C XML 1.0</dt>
         <dd><a href="https://www.w3.org/TR/xml/">Extensible Markup Language (XML) 1.0 (Fifth Edition)</a>, T. Bray, et al., W3C Recommendation, 26 November 2008.</dd>
         <dt id="XML-NAMES">XML-NAMES</dt>
