@@ -404,6 +404,8 @@ http://example.com/data.zip|decomp:zip/docs/report.xml|xml//title
     <dl>
         <dt id="W3C-XML">W3C XML 1.0</dt>
         <dd><a href="https://www.w3.org/TR/xml/">Extensible Markup Language (XML) 1.0 (Fifth Edition)</a>, T. Bray, et al., W3C Recommendation, 26 November 2008.</dd>
+        <dt id="XML-NAMES">XML-NAMES</dt>
+        <dd><a href="https://www.w3.org/TR/xml-names/">Namespaces in XML 1.0 (Third Edition)</a>, T. Bray, et al., W3C Recommendation, 8 December 2009.</dd>
         <dt id="XPATH-31">XPATH 3.1</dt>
         <dd><a href="https://www.w3.org/TR/xpath-31/">XML Path Language (XPath) 3.1</a>, J. Robie, et al., W3C Recommendation, 21 March 2017.</dd>
         <dt id="W3C-EXI">W3C EXI 1.0</dt>
@@ -490,7 +492,7 @@ DecodeTransform    ::= 'decode:' ( 'base64' | 'hex' | 'url' )
 (* Lexical Definitions (Informal) *)
 ResourceLocator    ::= (* A literal string representing a URI or file path. It uses standard '/' separators and does not support UNL operators like '?' or '@'. UNL navigation begins after the first pipe. *)
 URILiteral         ::= (* A string representing a valid URI, conforming to RFC3986 *)
-NCName             ::= [a-zA-Z_] [a-zA-Z0-9_.-]* (* Conforms to XML NCName; excludes special UNL chars *)
+NCName             ::= (* A Non-Colonized Name, as defined in [[XML-NAMES]]. It must not contain ':' and should be compliant with the full Unicode character set allowed by that standard. *)
 Integer            ::= [0-9]+
 Literal            ::= '"' ( [^"\\] | '\\' . )* '"' | "'" ( [^'\\] | '\\' . )* "'"
     </pre>
