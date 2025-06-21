@@ -43,7 +43,7 @@
       <li><strong>Node/Leaf Distinction (<code>@</code>):</strong> Provides fundamental semantic clarity by distinguishing between navigable containers and final values.</li>
       <li><strong>Advanced Structural Navigation (<code>outer()</code>):</strong> Enables complex, type-based navigation jumps that are difficult to achieve with other languages.</li>
       <li><strong>Fluid Transformations (<code>|format</code>):</strong> The pipe operator allows for on-the-fly data conversion within a single navigation expression.</li>
-      <li><strong>Native URI and Namespace Support:</strong> Full integration with semantic web standards (RDF, XML).</li>
+      <li><strong>Native URI and Namespace Support:</strong> Full integration with semantic web standards (RDF, XML) via EQName syntax.</li>
       <li><strong>Unified Syntax:</strong> One language to rule all your formats.</li>
     </ul>
     <h3>Design Principles</h3>
@@ -53,6 +53,43 @@
       <li><strong>Compatible:</strong> It is inspired by the best ideas from XPath and CSS without creating conflicts.</li>
       <li><strong>Intuitive:</strong> The syntax is designed to be read naturally.</li>
     </ul>
+  </section>
+  
+  <section id="execution-models">
+      <h2>Operating Models</h2>
+      <p>A UNL query is always evaluated against an initial context. The way this context is provided defines the two operating models for the language, which are formally described by the <a href="#ebnf-grammar">EBNF grammar</a>'s top-level <code>UNLQuery</code> rule.</p>
+      
+      <section id="in-memory-nav">
+          <h3>In-Memory Navigation</h3>
+          <p>
+              In this model, the UNL engine operates on a data structure that is already parsed and held in memory (e.g., an XML DOM object, a JSON object). The UNL query is an expression that navigates this existing structure directly. This corresponds to the <code>InMemoryQuery</code> production in the EBNF grammar.
+          </p>
+          <pre class="example">
+// Pseudo-code for a UNL library
+let myJson = { "user": { "name": "John" } };
+let inMemoryQuery = "user/@name";
+
+// The engine executes the path against the in-memory object.
+let result = unl.run(myJson, inMemoryQuery); // result: "John"
+          </pre>
+      </section>
+      
+      <section id="resource-loading-nav">
+          <h3>Resource Loading and Navigation</h3>
+          <p>
+              In this model, the UNL query begins with a <strong>Resource Locator</strong> (e.g., a file path or a full URI). This locator is immediately followed by a mandatory transformation pipe (<code>|</code>) that instructs the engine how to fetch and parse the resource into a navigable structure. This corresponds to the <code>ResourceQuery</code> production in the EBNF grammar.
+          </p>
+          <pre class="example">
+// The UNL query itself contains the resource locator.
+let resourceQuery = "data.csv|csv/row[1]/@price";
+let anotherQuery = "http://example.com/data.zip|decomp:zip/report.xml|xml//title";
+
+// The engine identifies the resource locator, fetches and parses it,
+// then navigates the resulting structure.
+let result1 = unl.run(resourceQuery);
+let result2 = unl.run(anotherQuery);
+          </pre>
+      </section>
   </section>
 
   <section id="core-concepts">
@@ -120,10 +157,37 @@
     </section>
   </section>
 
+  <section id="uris-namespaces">
+    <h2>URIs and Namespaces</h2>
+    <p>
+        UNL provides robust support for namespaced data formats like XML and RDF. To ensure unambiguous queries, UNL adopts the <strong>EQName</strong> (Extended QName) notation from [[XPATH-31]].
+    </p>
+    <dl>
+        <dt>Prefixed QName (e.g., <code>atom:title</code>)</dt>
+        <dd>The classic <code>prefix:local-name</code> syntax. Its use is supported but discouraged in favor of EQNames, as it relies on an external context to map the prefix to a namespace URI.</dd>
+        
+        <dt>EQName / URI-Qualified Name (e.g., <code>Q{http://www.w3.org/2005/Atom}title</code>)</dt>
+        <dd>The <code>Q{namespace-uri}local-name</code> syntax. This is the <strong>recommended approach</strong> as it includes the full namespace URI directly within the expression, making queries self-contained and unambiguous.</dd>
+    </dl>
+    <p>
+        Because RDF predicates are full URIs, using the EQName syntax is the most precise method for navigating RDF graphs.
+    </p>
+    <pre class="example">
+// EQName syntax is unambiguous and recommended
+Q{http://www.w3.org/2005/Atom}feed/Q{http://www.w3.org/2005/Atom}entry/title
+
+// EQName used to query an RDF property
+Q{http://xmlns.com/foaf/0.1/}Person/Q{http://xmlns.com/foaf/0.1/}knows
+
+// Full URI used in a predicate value
+*[rdf:type = &lt;http://xmlns.com/foaf/0.1/Person&gt;]
+    </pre>
+  </section>
+
   <section id="transforms">
     <h2>Format Transformations</h2>
     <p>
-      The pipe operator (<code>|</code>) is used for transformations. For clarity and future extensibility, transformations are namespaced based on their category. Data serialization formats are used directly, while operations like decompression and decoding require a prefix.
+      The pipe operator (<code>|</code>) is used for transformations. As described in the <a href="#execution-models">Operating Models</a>, the first pipe in a <code>ResourceQuery</code> serves to load and parse a resource. Subsequent pipes transform the current selection.
     </p>
     
     <h3>Data Serialization Formats</h3>
@@ -174,21 +238,6 @@
     </table>
   </section>
   
-  <section id="uris-namespaces">
-    <h2>URIs and Namespaces</h2>
-    <p>UNL natively supports XML and RDF namespaces.</p>
-    <pre class="example">
-// Full URI
-&lt;http://example.org/resource&gt;
-
-// Prefixed namespace
-prefix:name
-
-// Default prefix
-:name
-    </pre>
-  </section>
-
   <section id="predicates">
     <h2>Predicates (Filters)</h2>
     <p>
@@ -202,7 +251,7 @@ prefix:name
 [@attr != "value"]
 
 // Numeric or alphabetical comparisons
-[@attr &gt; 100]
+[@attr > 100]
 
 // Regular expression matching
 [@attr ~ "^pattern.*$"]
@@ -264,113 +313,35 @@ prefix:name
   </section>
   
   <section id="examples">
-    <h2>Usage Examples by Format</h2>
+    <h2>Examples</h2>
+    <p>The following examples illustrate the two operating models.</p>
     
-    <section id="ex-xml">
-      <h3>XML</h3>
-      <pre class="example">
-// Selects the 'isbn' attribute from the 'book' element
+    <section id="ex-in-memory">
+        <h3>In-Memory Mode Examples</h3>
+        <pre class="example">
+// Assumes 'doc' is a pre-parsed XML document object.
 doc/book/@isbn
 
-// Selects the 3rd paragraph of the 3rd chapter
-doc/chapter[3]/para
-
-// Selects an element with a namespace
-doc/ns:element
-      </pre>
-    </section>
-
-    <section id="ex-json">
-      <h3>JSON</h3>
-      <pre class="example">
-// Accesses the 'city' property in an 'address' object
-user/address/@city
-
-// Accesses the 'name' property of the first user in an array
+// Assumes 'users' is a pre-parsed JSON array.
 users[0]/@name
 
-// Accesses an optional property
-config?debug/@enabled
-      </pre>
+// Assumes a pre-parsed RDF graph. Uses EQName for clarity.
+Q{http://example.org/ontology#}Person[1]/Q{http://xmlns.com/foaf/0.1/}name
+        </pre>
     </section>
     
-    <section id="ex-csv">
-      <h3>CSV</h3>
-      <pre class="example">
-// Content of the 'price' column from the 2nd row (index 1)
-data|csv/row[1]/@price
+    <section id="ex-resource-loading">
+        <h3>Resource Loading Mode Examples</h3>
+        <pre class="example">
+// Query starts with a file path, followed by |csv to parse it.
+data.csv|csv/row[@id="ABC"]
 
-// Row where the 'id' column has the value "ABC"
-data|csv/row[@id="ABC"]
-      </pre>
-    </section>
-    
-    <section id="ex-rdf">
-      <h3>RDF</h3>
-      <pre class="example">
-// Navigating through relationships
-:person/foaf:knows/:name
+// Query starts with a full URI, followed by |decomp:zip.
+http://example.com/data.zip|decomp:zip/report.xml|xml//title
 
-// Selection by type
-*[rdf:type = :Book]
-
-// Navigating via a blank node to find a label
-graph/?/rdfs:label
-      </pre>
-    </section>
-  </section>
-  
-  <section id="advanced-examples">
-    <h2>Advanced Examples</h2>
-
-    <section id="ex-nested-multiformat">
-      <h3>Nested Multi-Format Navigation</h3>
-      <pre class="example">
-// Chain: CSV → JSON → XML → RDF
-data.csv|csv/
-  row[@type="record"]/
-    @metadata|json/
-      content|xml/
-        doc/@graph|rdf/
-          :resource/rdfs:label
-      </pre>
-    </section>
-
-    <section id="ex-archives">
-      <h3>Navigating Archives</h3>
-      <pre class="example">
-// Chain: ZIP decompression → folder → file → XML content
-package.zip|decomp:zip/
-  data/
-    2024/
-      report.xml|xml/
-        //section[@lang="fr"]/title
-      </pre>
-    </section>
-    
-    <section id="ex-complex-queries">
-      <h3>Complex Queries</h3>
-      <pre class="example">
-// outer with mixed node types
-article/outer(div|section|article, 3)/inner(p|span)
-
-// Combining ancestors and siblings
-//table[caption="Sales"]/../preceding-sibling::h2[1]
-
-// Chaining optional navigations
-user?profile?settings?theme/@value
-      </pre>
-    </section>
-    
-    <section id="ex-chained-transforms">
-      <h3>Chained Transformations</h3>
-      <pre class="example">
-// Multiple decoding and decompression
-@payload|decode:base64|decomp:gzip|json/data/items[*]/@id
-
-// Mixed formats with predicates
-archive|decomp:zip/*[@size > 1000]|xml//important
-      </pre>
+// Query starts with a relative path.
+./archive.zip|decomp:zip/*[@size > 1000]|xml//important
+        </pre>
     </section>
   </section>
   
@@ -379,6 +350,8 @@ archive|decomp:zip/*[@size > 1000]|xml//important
     <dl>
         <dt id="W3C-XML">W3C XML 1.0</dt>
         <dd><a href="https://www.w3.org/TR/xml/">Extensible Markup Language (XML) 1.0 (Fifth Edition)</a>, T. Bray, et al., W3C Recommendation, 26 November 2008.</dd>
+        <dt id="XPATH-31">XPATH 3.1</dt>
+        <dd><a href="https://www.w3.org/TR/xpath-31/">XML Path Language (XPath) 3.1</a>, J. Robie, et al., W3C Recommendation, 21 March 2017.</dd>
         <dt id="W3C-EXI">W3C EXI 1.0</dt>
         <dd><a href="https://www.w3.org/TR/exi/">Efficient XML Interchange (EXI) Format 1.0 (Second Edition)</a>, J. Schneider, et al., W3C Recommendation, 15 February 2011.</dd>
         <dt id="RFC8259">RFC 8259</dt>
@@ -412,19 +385,33 @@ archive|decomp:zip/*[@size > 1000]|xml//important
   
   <section id="ebnf-grammar" class="appendix">
     <h2>EBNF Grammar for UNL v1.0</h2>
-    <p>This appendix provides a non-normative EBNF (Extended Backus-Naur Form) grammar for the Unified Navigation Language.</p>
+    <p>This appendix provides a non-normative EBNF grammar for UNL. It formally describes the two query models.</p>
     <pre class="grammar">
-UNLExpression      ::= Path ( '|' Transformation )*
+(* A full UNL query can be one of two forms *)
+UNLQuery           ::= ResourceQuery | InMemoryQuery
+
+(* Form 1: Starts with a resource, requires a parsing transformation *)
+ResourceQuery      ::= ResourceLocator TransformationPipe ( TransformationPipe )*
+
+(* Form 2: Starts with a path, operates on a pre-existing context *)
+InMemoryQuery      ::= Path ( TransformationPipe )*
+
+TransformationPipe ::= '|' Transformation
 
 Path               ::= Step ( ( '/' | '?' ) Step )*
-
 Step               ::= ( PrimaryStep | Axis ) Predicate*
 
 PrimaryStep        ::= NameTest | Wildcard | LeafAccess | IdAccess | '.' | '(' Path ')'
 
-NameTest           ::= QName
+(* NameTest now supports EQNames, which include classic QNames *)
+NameTest           ::= EQName
+LeafAccess         ::= '@' EQName
+
+EQName             ::= QName | URIQualifiedName
+QName              ::= ( NCName ':' )? NCName
+URIQualifiedName   ::= 'Q{' URILiteral '}' NCName
+
 Wildcard           ::= '*' | '**' | '?'
-LeafAccess         ::= '@' QName
 IdAccess           ::= '#' NCName
 Axis               ::= '..' | '..' Integer | '...' | '+' | '-' | '~' | '~~'
 
@@ -447,8 +434,9 @@ DecompTransform    ::= 'decomp:' ( 'zip' | 'tar' | 'gz' | '7z' | 'gzip' )
 DecodeTransform    ::= 'decode:' ( 'base64' | 'hex' | 'url' )
 
 (* Lexical Definitions (Informal) *)
-QName              ::= ( NCName ':' )? NCName
-NCName             ::= [a-zA-Z_] [a-zA-Z0-9_.-]* (* Conforms to XML NCName *)
+ResourceLocator    ::= (* A string representing a URI or a local file path. Parsed until the first unquoted '|' *)
+URILiteral         ::= (* A string representing a valid URI, conforming to RFC3986 *)
+NCName             ::= [a-zA-Z_] [a-zA-Z0--9_.-]* (* Conforms to XML NCName *)
 Integer            ::= [0-9]+
 Literal            ::= '"' [^"]* '"' | "'" [^']* "'"
     </pre>
