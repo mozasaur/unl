@@ -79,6 +79,12 @@ let result = unl.run(myJson, inMemoryQuery); // result: "John"
           <p>
               In this model, the UNL query begins with a <strong>Resource Locator</strong> (e.g., a file path or a full URI). This locator is immediately followed by a mandatory transformation pipe (<code>|</code>) that instructs the engine how to fetch and parse the resource into a navigable structure. This corresponds to the <code>ResourceQuery</code> production in the EBNF grammar.
           </p>
+          <div class="note">
+            <h4>Important Note on Resource Locators</h4>
+            <p>
+                The <code>ResourceLocator</code> part of a query is treated as a literal string path or URI. It only supports the standard <code>/</code> as a path separator. The special UNL navigation operators such as <code>?</code> (optional navigation), <code>@</code> (leaf access), or wildcards are not valid within the locator itself. UNL's navigation logic is only applied to the path expression that follows the first transformation pipe.
+            </p>
+          </div>
           <pre class="example">
 // The UNL query itself contains the resource locator.
 let resourceQuery = "data.csv|csv/*[1]/@price";
@@ -164,6 +170,45 @@ let result2 = unl.run(anotherQuery);
         </tbody>
       </table>
     </section>
+  </section>
+
+  <section id="special-chars">
+    <h2>Handling Special Characters and Quoting</h2>
+    <p>
+        Many characters have a special syntactic meaning in UNL (e.g., <code>/ ? @ * [ ] ( ) | . :</code>). If a node or leaf name in the source data contains one of these characters, it must be enclosed in single (<code>'</code>) or double (<code>"</code>) quotes to be treated as a literal name.
+    </p>
+    <p>
+        This quoting mechanism applies to any path segment that is a name test.
+    </p>
+    
+    <h3>Rules for Quoting</h3>
+    <dl>
+        <dt>When to Quote</dt>
+        <dd>A name segment MUST be quoted if it contains any special UNL characters or if it is ambiguous with a numeric literal (e.g., a key named "3").</dd>
+        
+        <dt>Escaping within Quotes</dt>
+        <dd>To include a quote character within a quoted name, it must be escaped with a backslash (<code>\</code>). A literal backslash must also be escaped (<code>\\</code>).</dd>
+    </dl>
+    
+    <h3>Examples</h3>
+    <pre class="example">
+// Example 1: JSON key with a forward slash
+// Data: { "a/b": { "c": 1 } }
+// Query: "a/b"/c/@value
+
+// Example 2: Filename with special characters
+// Resource Locator: my-archive.zip
+// Path in zip: reports/report-[v1].xml
+my-archive.zip|decomp:zip/reports/"report-[v1].xml"|xml//...
+
+// Example 3: XML element name with dots
+// Data: &lt;com.example.Node&gt;Value&lt;/com.example.Node&gt;
+// Query: "com.example.Node"/text()
+
+// Example 4: Quoting a name containing quotes
+// Data: { "node with \"quotes\"": 42 }
+// Query: "node with \\\"quotes\\\""/@value
+    </pre>
   </section>
 
   <section id="uris-namespaces">
@@ -394,7 +439,7 @@ http://example.com/data.zip|decomp:zip/docs/report.xml|xml//title
   
   <section id="ebnf-grammar" class="appendix">
     <h2>EBNF Grammar for UNL v1.0</h2>
-    <p>This appendix provides a non-normative EBNF grammar for UNL. It formally describes the two query models.</p>
+    <p>This appendix provides a non-normative EBNF grammar for UNL. It formally describes the two query models and the quoting mechanism for names.</p>
     <pre class="grammar">
 (* A full UNL query can be one of two forms *)
 UNLQuery           ::= ResourceQuery | InMemoryQuery
@@ -412,9 +457,9 @@ Step               ::= ( PrimaryStep | Axis ) Predicate*
 
 PrimaryStep        ::= NameTest | Wildcard | LeafAccess | IdAccess | '.' | '(' Path ')'
 
-(* NameTest supports EQNames. LeafAccess supports named leaves and the leaf wildcard *)
-NameTest           ::= EQName
-LeafAccess         ::= '@' ( EQName | '*' )
+(* A NameTest can be a standard EQName or a quoted literal string *)
+NameTest           ::= EQName | Literal
+LeafAccess         ::= '@' ( EQName | '*' | Literal )
 
 EQName             ::= QName | URIQualifiedName
 QName              ::= ( NCName ':' )? NCName
@@ -443,11 +488,11 @@ DecompTransform    ::= 'decomp:' ( 'zip' | 'tar' | 'gz' | '7z' | 'gzip' )
 DecodeTransform    ::= 'decode:' ( 'base64' | 'hex' | 'url' )
 
 (* Lexical Definitions (Informal) *)
-ResourceLocator    ::= (* A string representing a URI or a local file path. Parsed until the first unquoted '|' *)
+ResourceLocator    ::= (* A literal string representing a URI or file path. It uses standard '/' separators and does not support UNL operators like '?' or '@'. UNL navigation begins after the first pipe. *)
 URILiteral         ::= (* A string representing a valid URI, conforming to RFC3986 *)
-NCName             ::= [a-zA-Z_] [a-zA-Z0-9_.-]* (* Conforms to XML NCName *)
+NCName             ::= [a-zA-Z_] [a-zA-Z0-9_.-]* (* Conforms to XML NCName; excludes special UNL chars *)
 Integer            ::= [0-9]+
-Literal            ::= '"' [^"]* '"' | "'" [^']* "'"
+Literal            ::= '"' ( [^"\\] | '\\' . )* '"' | "'" ( [^'\\] | '\\' . )* "'"
     </pre>
   </section>
 
