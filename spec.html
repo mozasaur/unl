@@ -101,7 +101,7 @@ let result2 = unl.run(anotherQuery);
       <dt><dfn>Leaf</dfn> (with <code>@</code>)</dt>
       <dd>Represents a final, non-navigable atomic value. It is the endpoint of a navigation path. Examples: a string, a number, a boolean value.</dd>
       <dt><dfn>Node</dfn> (without <code>@</code>)</dt>
-      <dd>Represents a navigable structure that contains other nodes or leaves. Examples: an XML element, a JSON object, a CSV row.</dd>
+      <dd>Represents a navigable structure that contains other <a>nodes</a> or leaves. Examples: an XML element, a JSON object, a CSV row.</dd>
     </dl>
   </section>
   
@@ -120,7 +120,7 @@ let result2 = unl.run(anotherQuery);
           <tr><td><code>?</code> (wildcard)</td><td>Single wildcard when used alone. Represents any single child (<code>a/?/c</code>).</td></tr>
           <tr><td><code>*</code></td><td>Multiple wildcard. Represents all direct children.</td></tr>
           <tr><td><code>**</code></td><td>Descendant wildcard. Represents all descendants at any level.</td></tr>
-          <tr><td><code>.</code></td><td>Represents the current node.</td></tr>
+          <tr><td><code>.</code></td><td>Represents the current <a>node</a>.</td></tr>
           <tr><td><code>@name</code></td><td>Accesses a <a href="#dfn-leaf">leaf</a> (atomic value) named "name".</td></tr>
           <tr><td><code>#id</code></td><td>Direct access to a node by its ID or URI.</td></tr>
         </tbody>
@@ -241,7 +241,7 @@ Q{http://xmlns.com/foaf/0.1/}Person/Q{http://xmlns.com/foaf/0.1/}knows
   <section id="predicates">
     <h2>Predicates (Filters)</h2>
     <p>
-      Predicates, placed between square brackets <code>[...]</code>, are used to filter sets of nodes.
+      Predicates, placed between square brackets <code>[...]</code>, are used to filter sets of <a>nodes</a>.
     </p>
     <pre class="example">
 // Equality test
@@ -284,7 +284,7 @@ Q{http://xmlns.com/foaf/0.1/}Person/Q{http://xmlns.com/foaf/0.1/}knows
       <h3>Structural Navigation</h3>
       <dl>
         <dt><code>outer(selector, n)</code></dt>
-        <dd>Navigates upwards <code>n</code> levels, jumping only over nodes that match the selector (e.g., <code>div|p</code>).</dd>
+        <dd>Navigates upwards <code>n</code> levels, jumping only over <a>nodes</a> that match the selector (e.g., <code>div|p</code>).</dd>
         <dt><code>inner(selector)</code></dt>
         <dd>Navigates to the terminal elements matching the selector within the current context.</dd>
       </dl>
@@ -294,9 +294,9 @@ Q{http://xmlns.com/foaf/0.1/}Person/Q{http://xmlns.com/foaf/0.1/}knows
       <h3>Hierarchical Filtering</h3>
       <dl>
         <dt><code>outermost(nodes)</code></dt>
-        <dd>From a set of nodes, keeps only those that are not contained within other nodes in the set.</dd>
+        <dd>From a set of <a>nodes</a>, keeps only those that are not contained within other <a>nodes</a> in the set.</dd>
         <dt><code>innermost(nodes)</code></dt>
-        <dd>From a set of nodes, keeps only those that do not contain any other nodes from the set.</dd>
+        <dd>From a set of <a>nodes</a>, keeps only those that do not contain any other <a>nodes</a> from the set.</dd>
       </dl>
     </section>
     
@@ -304,9 +304,9 @@ Q{http://xmlns.com/foaf/0.1/}Person/Q{http://xmlns.com/foaf/0.1/}knows
       <h3>Utility Functions</h3>
       <dl>
         <dt><code>only(elements)</code></dt><dd>Tests if the context contains only the specified elements.</dd>
-        <dt><code>text()</code></dt><dd>Returns the text content of a node.</dd>
+        <dt><code>text()</code></dt><dd>Returns the text content of a <a>node</a>.</dd>
         <dt><code>count()</code></dt><dd>Returns the number of elements in a selection.</dd>
-        <dt><code>type()</code></dt><dd>Returns the node's type (e.g., "element", "object", "string").</dd>
+        <dt><code>type()</code></dt><dd>Returns the <a>node's</a> type (e.g., "element", "object", "string").</dd>
         <dt><code>not(expr)</code></dt><dd>Negation of a predicate expression.</dd>
       </dl>
     </section>
@@ -436,7 +436,7 @@ DecodeTransform    ::= 'decode:' ( 'base64' | 'hex' | 'url' )
 (* Lexical Definitions (Informal) *)
 ResourceLocator    ::= (* A string representing a URI or a local file path. Parsed until the first unquoted '|' *)
 URILiteral         ::= (* A string representing a valid URI, conforming to RFC3986 *)
-NCName             ::= [a-zA-Z_] [a-zA-Z0--9_.-]* (* Conforms to XML NCName *)
+NCName             ::= [a-zA-Z_] [a-zA-Z0-9_.-]* (* Conforms to XML NCName *)
 Integer            ::= [0-9]+
 Literal            ::= '"' [^"]* '"' | "'" [^']* "'"
     </pre>
