@@ -85,7 +85,7 @@ let result = unl.run(myJson, inMemoryQuery); // result: "John"
                 The <code>ResourceLocator</code> part of a query is treated as a literal string path or URI. It only supports the standard <code>/</code> as a path separator. The special UNL navigation operators such as <code>?</code> (optional navigation), <code>@</code> (leaf access), or wildcards are not valid within the locator itself. UNL's navigation logic is only applied to the path expression that follows the first transformation pipe.
             </p>
           </div>
-          <pre class="example">
+          <pre class="example nohighlight">
 // The UNL query itself contains the resource locator.
 let resourceQuery = "data.csv|csv/*[1]/@price";
 let anotherQuery = "http://example.com/data.zip|decomp:zip/docs/report.xml|xml//title";
@@ -394,7 +394,7 @@ Q{http://example.org/ontology#}Person[1]/Q{http://xmlns.com/foaf/0.1/}name
     
     <section id="ex-resource-loading">
         <h3>Resource Loading Mode Examples</h3>
-        <pre class="example">
+        <pre class="example nohighlight">
 // Query starts with a file path, followed by |csv to parse it into an array.
 data.csv|csv/*[@id="ABC"]/@name
 
@@ -570,7 +570,7 @@ user/@active   // Returns leaf true
             </ul>
         </dd>
     </dl>
-    <pre class="example">
+    <pre class="example nohighlight">
 // Example 1: CSV with header (in "users.csv")
 id,name,role,tags
 1,Alice,admin,"a,b,c"
@@ -625,7 +625,7 @@ Q{http://xmlns.com/foaf/0.1/}Person/@name  // Returns leaf "Alice"
             </ul>
         </dd>
     </dl>
-     <pre class="example">
+     <pre class="example nohighlight">
 // Example 1: Select a file node and pipe its content to the XML parser.
 my_archive.zip|decomp:zip/docs/report.xml|xml//title
 
