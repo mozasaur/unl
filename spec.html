@@ -273,8 +273,12 @@ Q{http://xmlns.com/foaf/0.1/}Person/Q{http://xmlns.com/foaf/0.1/}knows
             <tr><td><code>|decomp:zip</code></td><td>ZIP file format, a widely used archive format that supports lossless data compression.</td><td><a href="#PKWARE-ZIP">PKWARE ZIP</a></td></tr>
             <tr><td><code>|decomp:tar</code></td><td>Tape Archive, a file format for collecting multiple files into one archive file for distribution or backup.</td><td><a href="#POSIX-TAR">POSIX.1-2017</a></td></tr>
             <tr><td><code>|decomp:gz</code></td><td>Gzip, a file format and a software application used for file compression and decompression.</td><td><a href="#RFC1952">RFC 1952</a></td></tr>
-            <tr><td><code>|decomp:gzip</code></td><td>Alias for gz, referring to the Gzip stream format.</td><td><a href="#RFC1952">RFC 1952</a></td></tr>
             <tr><td><code>|decomp:7z</code></td><td>7z, an archive format that provides a high compression ratio.</td><td><a href="#7Z-FORMAT">7-Zip Format</a></td></tr>
+            <tr><td><code>|decomp:rar</code></td><td>Roshal Archive, a popular proprietary archive file format.</td><td>N/A</td></tr>
+            <tr><td><code>|decomp:xz</code></td><td>XZ, a compression format based on the LZMA2 algorithm, common in software distribution.</td><td><a href="#XZ-SPEC">XZ Format</a></td></tr>
+            <tr><td><code>|decomp:bz2</code></td><td>Bzip2, a high-quality data compressor.</td><td><a href="#BZIP2-SPEC">Bzip2 Format</a></td></tr>
+            <tr><td><code>|decomp:zstd</code></td><td>Zstandard, a fast lossless compression algorithm.</td><td><a href="#RFC8878">RFC 8878</a></td></tr>
+            <tr><td><code>|decomp:brotli</code></td><td>Brotli, a generic-purpose lossless compression algorithm, common for web content.</td><td><a href="#RFC7932">RFC 7932</a></td></tr>
         </tbody>
     </table>
 
@@ -288,6 +292,10 @@ Q{http://xmlns.com/foaf/0.1/}Person/Q{http://xmlns.com/foaf/0.1/}knows
             <tr><td><code>|decode:base64</code></td><td>Base64 encoding scheme, used to represent binary data in an ASCII string format.</td><td><a href="#RFC4648">RFC 4648</a></td></tr>
             <tr><td><code>|decode:hex</code></td><td>Hexadecimal (Base16) encoding, used to represent binary data.</td><td><a href="#RFC4648">RFC 4648</a></td></tr>
             <tr><td><code>|decode:url</code></td><td>Percent-Encoding, used to encode information in a Uniform Resource Identifier (URI).</td><td><a href="#RFC3986">RFC 3986</a></td></tr>
+            <tr><td><code>|decode:html-entities</code></td><td>Decodes HTML/XML character entities (e.g., &amp;amp;) into their corresponding characters.</td><td><a href="#WHATWG-HTML">WHATWG HTML</a></td></tr>
+            <tr><td><code>|decode:json-string</code></td><td>Un-escapes a string that was itself encoded as a JSON string literal (e.g., handles \\").</td><td><a href="#RFC8259">RFC 8259</a></td></tr>
+            <tr><td><code>|decode:punycode</code></td><td>Decodes Punycode-encoded strings, used for Internationalized Domain Names.</td><td><a href="#RFC3492">RFC 3492</a></td></tr>
+            <tr><td><code>|decode:quoted-printable</code></td><td>Decodes content using the Quoted-Printable encoding from MIME standards.</td><td><a href="#RFC2045">RFC 2045</a></td></tr>
         </tbody>
     </table>
   </section>
@@ -432,10 +440,22 @@ http://example.com/data.zip|decomp:zip/docs/report.xml|xml//title
         <dd><a href="https://www.rfc-editor.org/info/rfc1952">GZIP file format specification version 4.3</a>, P. Deutsch, IETF, May 1996.</dd>
         <dt id="7Z-FORMAT">7-Zip Format</dt>
         <dd><a href="https://www.7-zip.org/7z.html">7z format</a>, Igor Pavlov.</dd>
+        <dt id="XZ-SPEC">XZ Format</dt>
+        <dd><a href="https://tukaani.org/xz/xz-file-format.txt">The .xz File Format</a>, Tukaani.</dd>
+        <dt id="BZIP2-SPEC">Bzip2 Format</dt>
+        <dd><a href="https://github.com/dsnet/compress/blob/master/doc/bzip2-format.pdf">BZIP2 Format Specification</a>, J. Seward.</dd>
+        <dt id="RFC8878">RFC 8878</dt>
+        <dd><a href="https://www.rfc-editor.org/info/rfc8878">Zstandard Compression Algorithm</a>, Y. Collet & M. Kucherawy, Ed., IETF, February 2021.</dd>
+        <dt id="RFC7932">RFC 7932</dt>
+        <dd><a href="https://www.rfc-editor.org/info/rfc7932">Brotli Compressed Data Format</a>, J. Alakuijala & Z. Szabadka, IETF, July 2016.</dd>
         <dt id="RFC4648">RFC 4648</dt>
         <dd><a href="https://www.rfc-editor.org/info/rfc4648">The Base16, Base32, and Base64 Data Encodings</a>, S. Josefsson, IETF, October 2006.</dd>
         <dt id="RFC3986">RFC 3986</dt>
         <dd><a href="https://www.rfc-editor.org/info/rfc3986">Uniform Resource Identifier (URI): Generic Syntax</a>, T. Berners-Lee, et al., IETF, January 2005.</dd>
+        <dt id="RFC3492">RFC 3492</dt>
+        <dd><a href="https://www.rfc-editor.org/info/rfc3492">Punycode: A Bootstring encoding of Unicode for Internationalized Domain Names in Applications (IDNA)</a>, A. Costello, IETF, March 2003.</dd>
+        <dt id="RFC2045">RFC 2045</dt>
+        <dd><a href="https://www.rfc-editor.org/info/rfc2045">Multipurpose Internet Mail Extensions (MIME) Part One: Format of Internet Message Bodies</a>, N. Freed & N. Borenstein, IETF, November 1996.</dd>
     </dl>
   </section>
   
@@ -486,8 +506,8 @@ FunctionCall       ::= NCName '(' ( FilterExpression ( ',' FilterExpression )* )
 Transformation     ::= DataFormat | DecompTransform | DecodeTransform
 
 DataFormat         ::= 'xml' | 'exi' | 'json' | 'csv' | 'rdf' | 'html' | 'text' | 'yaml' | 'toml'
-DecompTransform    ::= 'decomp:' ( 'zip' | 'tar' | 'gz' | '7z' | 'gzip' )
-DecodeTransform    ::= 'decode:' ( 'base64' | 'hex' | 'url' )
+DecompTransform    ::= 'decomp:' ( 'zip' | 'tar' | 'gz' | '7z' | 'gzip' | 'rar' | 'xz' | 'bz2' | 'zstd' | 'brotli' )
+DecodeTransform    ::= 'decode:' ( 'base64' | 'hex' | 'url' | 'html-entities' | 'json-string' | 'punycode' | 'quoted-printable' )
 
 (* Lexical Definitions (Informal) *)
 ResourceLocator    ::= (* A literal string representing a URI or file path. It uses standard '/' separators and does not support UNL operators like '?' or '@'. UNL navigation begins after the first pipe. *)
