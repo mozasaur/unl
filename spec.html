@@ -409,6 +409,50 @@ archive|decomp:zip/*[@size > 1000]|xml//important
         <dd><a href="https://www.rfc-editor.org/info/rfc3986">Uniform Resource Identifier (URI): Generic Syntax</a>, T. Berners-Lee, et al., IETF, January 2005.</dd>
     </dl>
   </section>
+  
+  <section id="ebnf-grammar" class="appendix">
+    <h2>EBNF Grammar for UNL v1.0</h2>
+    <p>This appendix provides a non-normative EBNF (Extended Backus-Naur Form) grammar for the Unified Navigation Language.</p>
+    <pre class="grammar">
+UNLExpression      ::= Path ( '|' Transformation )*
+
+Path               ::= Step ( ( '/' | '?' ) Step )*
+
+Step               ::= ( PrimaryStep | Axis ) Predicate*
+
+PrimaryStep        ::= NameTest | Wildcard | LeafAccess | IdAccess | '.' | '(' Path ')'
+
+NameTest           ::= QName
+Wildcard           ::= '*' | '**' | '?'
+LeafAccess         ::= '@' QName
+IdAccess           ::= '#' NCName
+Axis               ::= '..' | '..' Integer | '...' | '+' | '-' | '~' | '~~'
+
+Predicate          ::= '[' FilterExpression ']'
+
+FilterExpression   ::= OrExpression
+OrExpression       ::= AndExpression ( '|' AndExpression )*
+AndExpression      ::= EqualityExpression ( '&amp;' EqualityExpression )*
+EqualityExpression ::= RelationalExpression ( ( '=' | '!=' ) RelationalExpression )?
+RelationalExpression ::= PrimaryFilterExpr ( ( '&lt;' | '&gt;' | '&lt;=' | '&gt;=' | '~' ) PrimaryFilterExpr )*
+
+PrimaryFilterExpr  ::= Literal | FunctionCall | Path | LeafAccess | '!' FilterExpression | '(' FilterExpression ')' | Integer
+
+FunctionCall       ::= NCName '(' ( FilterExpression ( ',' FilterExpression )* )? ')'
+
+Transformation     ::= DataFormat | DecompTransform | DecodeTransform
+
+DataFormat         ::= 'xml' | 'exi' | 'json' | 'csv' | 'rdf' | 'html' | 'text' | 'yaml' | 'toml'
+DecompTransform    ::= 'decomp:' ( 'zip' | 'tar' | 'gz' | '7z' | 'gzip' )
+DecodeTransform    ::= 'decode:' ( 'base64' | 'hex' | 'url' )
+
+(* Lexical Definitions (Informal) *)
+QName              ::= ( NCName ':' )? NCName
+NCName             ::= [a-zA-Z_] [a-zA-Z0-9_.-]* (* Conforms to XML NCName *)
+Integer            ::= [0-9]+
+Literal            ::= '"' [^"]* '"' | "'" [^']* "'"
+    </pre>
+  </section>
 
 </body>
 </html>
