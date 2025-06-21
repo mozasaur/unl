@@ -82,7 +82,7 @@ let result = unl.run(myJson, inMemoryQuery); // result: "John"
           <pre class="example">
 // The UNL query itself contains the resource locator.
 let resourceQuery = "data.csv|csv/row[1]/@price";
-let anotherQuery = "http://example.com/data.zip|decomp:zip/report.xml|xml//title";
+let anotherQuery = "http://example.com/data.zip|decomp:zip/docs/@report.xml|xml//title";
 
 // The engine identifies the resource locator, fetches and parses it,
 // then navigates the resulting structure.
@@ -122,7 +122,7 @@ let result2 = unl.run(anotherQuery);
           <tr><td><code>**</code></td><td>Descendant wildcard. Represents all descendants at any level.</td></tr>
           <tr><td><code>.</code></td><td>Represents the current <a>node</a>.</td></tr>
           <tr><td><code>@name</code></td><td>Accesses a <a href="#dfn-leaf">leaf</a> (atomic value) named "name".</td></tr>
-          <tr><td><code>#id</code></td><td>Direct access to a node by its ID or URI.</td></tr>
+          <tr><td><code>#id</code></td><td>Direct access to a <a>node</a> by its ID or URI.</td></tr>
         </tbody>
       </table>
     </section>
@@ -336,8 +336,8 @@ Q{http://example.org/ontology#}Person[1]/Q{http://xmlns.com/foaf/0.1/}name
 // Query starts with a file path, followed by |csv to parse it.
 data.csv|csv/row[@id="ABC"]
 
-// Query starts with a full URI, followed by |decomp:zip.
-http://example.com/data.zip|decomp:zip/report.xml|xml//title
+// Query starts with a full URI. Note the use of @ to access the file leaf.
+http://example.com/data.zip|decomp:zip/docs/@report.xml|xml//title
 
 // Query starts with a relative path.
 ./archive.zip|decomp:zip/*[@size > 1000]|xml//important
@@ -440,6 +440,100 @@ NCName             ::= [a-zA-Z_] [a-zA-Z0-9_.-]* (* Conforms to XML NCName *)
 Integer            ::= [0-9]+
 Literal            ::= '"' [^"]* '"' | "'" [^']* "'"
     </pre>
+  </section>
+
+  <section id="data-mapping" class="appendix">
+    <h2>Data Model Mapping</h2>
+    <p>
+        This section defines how UNL's abstract concepts of <a>Node</a> and <a>Leaf</a> are mapped onto the concrete structures of each major supported format.
+    </p>
+
+    <h3>XML</h3>
+    <dl>
+        <dt><a>Node</a></dt>
+        <dd>An XML Element. The document itself is the root node.</dd>
+        <dt><a>Leaf</a></dt>
+        <dd>An XML Attribute, or a Text node. The value of the attribute or text is the leaf's value.</dd>
+    </dl>
+    <pre class="example">
+&lt;!-- Data --&gt;
+&lt;book isbn="123-456"&gt;UNL Guide&lt;/book&gt;
+
+// UNL Queries
+book/@isbn     // Returns leaf "123-456"
+book/text()    // Returns leaf "UNL Guide"
+    </pre>
+
+    <h3>JSON</h3>
+    <dl>
+        <dt><a>Node</a></dt>
+        <dd>A JSON Object (<code>{}</code>) or a JSON Array (<code>[]</code>).</dd>
+        <dt><a>Leaf</a></dt>
+        <dd>A value within an object or array that is a String, Number, Boolean, or Null.</dd>
+    </dl>
+    <pre class="example">
+// Data
+{ "user": { "name": "Alice", "active": true } }
+
+// UNL Queries
+user/@name     // Returns leaf "Alice"
+user/@active   // Returns leaf true
+    </pre>
+
+    <h3>CSV</h3>
+    <p>A CSV file is mapped to a conceptual node structure upon parsing.</p>
+    <dl>
+        <dt><a>Node</a></dt>
+        <dd>The entire document is the root node, and each row within it is also treated as a node.</dd>
+        <dt><a>Leaf</a></dt>
+        <dd>An individual cell value within a row. It is accessed via the name of its column header.</dd>
+    </dl>
+    <pre class="example">
+// Data (in "users.csv")
+id,name,role
+1,Alice,admin
+2,Bob,user
+
+// UNL Query (Resource Loading Mode)
+users.csv|csv/row[@id="1"]/@role  // Returns leaf "admin"
+    </pre>
+
+    <h3>RDF</h3>
+    <p>UNL navigates an RDF graph by following predicates (properties).</p>
+    <dl>
+        <dt><a>Node</a></dt>
+        <dd>A resource identified by a URI or a Blank Node, when it acts as a subject or object of a triple.</dd>
+        <dt><a>Leaf</a></dt>
+        <dd>A Literal value (e.g., a string, number, or date) that is an object of a triple.</dd>
+    </dl>
+    <pre class="example">
+// Data (in Turtle syntax)
+@prefix ex: &lt;http://example.org/&gt; .
+@prefix foaf: &lt;http://xmlns.com/foaf/0.1/&gt; .
+
+ex:person1 a foaf:Person ;
+    foaf:name "Alice" .
+
+// UNL Query (In-Memory Mode, using EQNames)
+Q{http://xmlns.com/foaf/0.1/}Person/@name  // Returns leaf "Alice"
+    </pre>
+
+    <h3>Archives (zip, tar, etc.)</h3>
+    <p>Archives are treated like a file system.</p>
+    <dl>
+        <dt><a>Node</a></dt>
+        <dd>A directory inside the archive.</dd>
+        <dt><a>Leaf</a></dt>
+        <dd>A file inside the archive. The content of the file is its value, which usually requires another transformation pipe to be interpreted.</dd>
+    </dl>
+     <pre class="example">
+// UNL Query (Resource Loading Mode)
+my_archive.zip|decomp:zip/docs/@report.xml|xml//title
+
+// "docs" is a node (directory)
+// "@report.xml" accesses the leaf (file) whose content is then piped to |xml
+    </pre>
+
   </section>
 
 </body>
