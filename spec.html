@@ -81,8 +81,8 @@ let result = unl.run(myJson, inMemoryQuery); // result: "John"
           </p>
           <pre class="example">
 // The UNL query itself contains the resource locator.
-let resourceQuery = "data.csv|csv/row[1]/@price";
-let anotherQuery = "http://example.com/data.zip|decomp:zip/docs/@report.xml|xml//title";
+let resourceQuery = "data.csv|csv/*[1]/@price";
+let anotherQuery = "http://example.com/data.zip|decomp:zip/docs/report.xml|xml//title";
 
 // The engine identifies the resource locator, fetches and parses it,
 // then navigates the resulting structure.
@@ -99,9 +99,9 @@ let result2 = unl.run(anotherQuery);
     </p>
     <dl>
       <dt><dfn>Leaf</dfn> (with <code>@</code>)</dt>
-      <dd>Represents a final, non-navigable atomic value. It is the endpoint of a navigation path. Examples: a string, a number, a boolean value.</dd>
+      <dd>Represents a final, non-navigable atomic value. It is the endpoint of a navigation path. Examples: a string, a number, a boolean value, or a node's metadata attribute.</dd>
       <dt><dfn>Node</dfn> (without <code>@</code>)</dt>
-      <dd>Represents a navigable structure that contains other <a>nodes</a> or leaves. Examples: an XML element, a JSON object, a CSV row.</dd>
+      <dd>Represents a navigable structure that contains other <a>nodes</a> or leaves. Examples: an XML element, a JSON object, a CSV row represented as a node.</dd>
     </dl>
   </section>
   
@@ -118,10 +118,11 @@ let result2 = unl.run(anotherQuery);
           <tr><td><code>/</code></td><td>Mandatory navigation to a child. Must exist.</td></tr>
           <tr><td><code>?</code></td><td>Optional navigation between nodes. Allows chaining paths that may not exist (<code>a?b</code> is equivalent to <code>a</code> or <code>a/b</code>).</td></tr>
           <tr><td><code>?</code> (wildcard)</td><td>Single wildcard when used alone. Represents any single child (<code>a/?/c</code>).</td></tr>
-          <tr><td><code>*</code></td><td>Multiple wildcard. Represents all direct children.</td></tr>
-          <tr><td><code>**</code></td><td>Descendant wildcard. Represents all descendants at any level.</td></tr>
+          <tr><td><code>*</code></td><td>Multiple wildcard. Represents all child <a>nodes</a>.</td></tr>
+          <tr><td><code>**</code></td><td>Descendant wildcard. Represents all descendant <a>nodes</a>.</td></tr>
           <tr><td><code>.</code></td><td>Represents the current <a>node</a>.</td></tr>
-          <tr><td><code>@name</code></td><td>Accesses a <a href="#dfn-leaf">leaf</a> (atomic value) named "name".</td></tr>
+          <tr><td><code>@name</code></td><td>Accesses a named <a href="#dfn-leaf">leaf</a>.</td></tr>
+          <tr><td><code>@*</code></td><td>Selects all <a href="#dfn-leaf">leaves</a> of the current <a>node</a> as an ordered collection.</td></tr>
           <tr><td><code>#id</code></td><td>Direct access to a <a>node</a> by its ID or URI.</td></tr>
         </tbody>
       </table>
@@ -191,7 +192,6 @@ Q{http://xmlns.com/foaf/0.1/}Person/Q{http://xmlns.com/foaf/0.1/}knows
     </p>
     
     <h3>Data Serialization Formats</h3>
-    <p>Used directly without a prefix.</p>
     <table>
         <thead>
             <tr><th>Format</th><th>Description</th><th>Reference</th></tr>
@@ -210,7 +210,6 @@ Q{http://xmlns.com/foaf/0.1/}Person/Q{http://xmlns.com/foaf/0.1/}knows
     </table>
 
     <h3>Decompression (<code>decomp:</code> prefix)</h3>
-    <p>The <code>decomp:</code> prefix indicates a read-only decompression operation to access the contents of an archive or a compressed file. The language is extensible to any future compression technology using this prefix.</p>
     <table>
         <thead>
             <tr><th>Format</th><th>Description</th><th>Reference</th></tr>
@@ -225,7 +224,6 @@ Q{http://xmlns.com/foaf/0.1/}Person/Q{http://xmlns.com/foaf/0.1/}knows
     </table>
 
     <h3>Decoding (<code>decode:</code> prefix)</h3>
-    <p>The <code>decode:</code> prefix is used for various binary and text decoding techniques.</p>
     <table>
         <thead>
             <tr><th>Format</th><th>Description</th><th>Reference</th></tr>
@@ -306,7 +304,7 @@ Q{http://xmlns.com/foaf/0.1/}Person/Q{http://xmlns.com/foaf/0.1/}knows
         <dt><code>only(elements)</code></dt><dd>Tests if the context contains only the specified elements.</dd>
         <dt><code>text()</code></dt><dd>Returns the text content of a <a>node</a>.</dd>
         <dt><code>count()</code></dt><dd>Returns the number of elements in a selection.</dd>
-        <dt><code>type()</code></dt><dd>Returns the <a>node's</a> type (e.g., "element", "object", "string").</dd>
+        <dt><code>type()</code></dt><dd>Returns the <a data-lt="Node">node's</a> type (e.g., "element", "object", "string").</dd>
         <dt><code>not(expr)</code></dt><dd>Negation of a predicate expression.</dd>
       </dl>
     </section>
@@ -323,7 +321,7 @@ Q{http://xmlns.com/foaf/0.1/}Person/Q{http://xmlns.com/foaf/0.1/}knows
 doc/book/@isbn
 
 // Assumes 'users' is a pre-parsed JSON array.
-users[0]/@name
+users[1]/@name
 
 // Assumes a pre-parsed RDF graph. Uses EQName for clarity.
 Q{http://example.org/ontology#}Person[1]/Q{http://xmlns.com/foaf/0.1/}name
@@ -333,13 +331,13 @@ Q{http://example.org/ontology#}Person[1]/Q{http://xmlns.com/foaf/0.1/}name
     <section id="ex-resource-loading">
         <h3>Resource Loading Mode Examples</h3>
         <pre class="example">
-// Query starts with a file path, followed by |csv to parse it.
-data.csv|csv/row[@id="ABC"]
+// Query starts with a file path, followed by |csv to parse it into an array.
+data.csv|csv/*[@id="ABC"]/@name
 
-// Query starts with a full URI. Note the use of @ to access the file leaf.
-http://example.com/data.zip|decomp:zip/docs/@report.xml|xml//title
+// Query starts with a full URI. Navigation to a file is by name, not with '@'.
+http://example.com/data.zip|decomp:zip/docs/report.xml|xml//title
 
-// Query starts with a relative path.
+// The wildcard selects file and directory nodes, which are then filtered by size.
 ./archive.zip|decomp:zip/*[@size > 1000]|xml//important
         </pre>
     </section>
@@ -403,9 +401,9 @@ Step               ::= ( PrimaryStep | Axis ) Predicate*
 
 PrimaryStep        ::= NameTest | Wildcard | LeafAccess | IdAccess | '.' | '(' Path ')'
 
-(* NameTest now supports EQNames, which include classic QNames *)
+(* NameTest supports EQNames. LeafAccess supports named leaves and the leaf wildcard *)
 NameTest           ::= EQName
-LeafAccess         ::= '@' EQName
+LeafAccess         ::= '@' ( EQName | '*' )
 
 EQName             ::= QName | URIQualifiedName
 QName              ::= ( NCName ':' )? NCName
@@ -445,7 +443,7 @@ Literal            ::= '"' [^"]* '"' | "'" [^']* "'"
   <section id="data-mapping" class="appendix">
     <h2>Data Model Mapping</h2>
     <p>
-        This section defines how UNL's abstract concepts of <a>Node</a> and <a>Leaf</a> are mapped onto the concrete structures of each major supported format.
+        This section defines how UNL's abstract concepts of <a>Node</a> and <a>Leaf</a> are mapped onto the concrete structures of each major supported format. UNL is a <strong>1-based</strong> language, following the convention of XPath for all positional indexing.
     </p>
 
     <h3>XML</h3>
@@ -481,21 +479,35 @@ user/@active   // Returns leaf true
     </pre>
 
     <h3>CSV</h3>
-    <p>A CSV file is mapped to a conceptual node structure upon parsing.</p>
+    <p>The <code>|csv</code> transformation parses data into an array of nodes. All indexing is 1-based.</p>
     <dl>
         <dt><a>Node</a></dt>
-        <dd>The entire document is the root node, and each row within it is also treated as a node.</dd>
+        <dd>The result of the <code>|csv</code> transformation is a single Array Node. Each record (line) in the CSV is mapped to a child Node within this array.</dd>
         <dt><a>Leaf</a></dt>
-        <dd>An individual cell value within a row. It is accessed via the name of its column header.</dd>
+        <dd>
+            An individual cell value within a row. A row's leaves form an ordered collection that can be accessed in two equivalent ways:
+            <ul>
+                <li><strong>By Name (if header exists):</strong> Using <code>/@name</code>. This is the most readable method.</li>
+                <li><strong>By Position (always available):</strong> Using <code>/@*[n]</code>, where <code>n</code> is a 1-based integer. <code>@*</code> selects all leaves, and <code>[n]</code> filters for the n-th position.</li>
+            </ul>
+        </dd>
     </dl>
     <pre class="example">
-// Data (in "users.csv")
-id,name,role
-1,Alice,admin
-2,Bob,user
+// Example 1: CSV with header (in "users.csv")
+id,name,role,tags
+1,Alice,admin,"a,b,c"
 
-// UNL Query (Resource Loading Mode)
-users.csv|csv/row[@id="1"]/@role  // Returns leaf "admin"
+// Query 1: Get the 'role' leaf from rows where 'id' leaf is "1"
+users.csv|csv/*[@id="1"]/@role          // Returns leaf "admin"
+
+// Query 2: Get the 2nd tag from Alice's record. This requires a nested parse.
+users.csv|csv/*[1]/@tags|csv/*[1]/@*[2]    // Returns leaf "b"
+
+// Example 2: Headerless CSV (in "logs.csv")
+1687354800,ERROR,auth_service
+
+// Get the 2nd column of the 1st record
+logs.csv|csv/*[1]/@*[2]                   // Returns leaf "ERROR"
     </pre>
 
     <h3>RDF</h3>
@@ -519,19 +531,31 @@ Q{http://xmlns.com/foaf/0.1/}Person/@name  // Returns leaf "Alice"
     </pre>
 
     <h3>Archives (zip, tar, etc.)</h3>
-    <p>Archives are treated like a file system.</p>
+    <p>Archives are treated as a virtual filesystem. Both files and directories are modeled as <a>Nodes</a> to allow querying their metadata.</p>
     <dl>
         <dt><a>Node</a></dt>
-        <dd>A directory inside the archive.</dd>
+        <dd>A directory or a file. Directory nodes can contain other nodes. File nodes are terminal (have no children).</dd>
         <dt><a>Leaf</a></dt>
-        <dd>A file inside the archive. The content of the file is its value, which usually requires another transformation pipe to be interpreted.</dd>
+        <dd>
+            Metadata about a file or directory node. A standard set of metadata leaves is defined:
+            <ul>
+                <li><code>@name</code>: The name of the file or directory.</li>
+                <li><code>@size</code>: The uncompressed size in bytes (files only).</li>
+                <li><code>@compressed_size</code>: The compressed size in bytes (files only).</li>
+                <li><code>@modified_date</code>: The modification timestamp.</li>
+                <li><code>@is_dir</code>: A boolean that is true if the node is a directory.</li>
+            </ul>
+        </dd>
     </dl>
      <pre class="example">
-// UNL Query (Resource Loading Mode)
-my_archive.zip|decomp:zip/docs/@report.xml|xml//title
+// Example 1: Select a file node and pipe its content to the XML parser.
+my_archive.zip|decomp:zip/docs/report.xml|xml//title
 
-// "docs" is a node (directory)
-// "@report.xml" accesses the leaf (file) whose content is then piped to |xml
+// Example 2: Get the size of a specific file.
+my_archive.zip|decomp:zip/docs/report.xml/@size
+
+// Example 3: Filter files by metadata, then pipe their content.
+my_archive.zip|decomp:zip/*[@is_dir=false() and @size>1000]|xml//important
     </pre>
 
   </section>
