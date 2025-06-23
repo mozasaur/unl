@@ -80,7 +80,7 @@ let result = unl.run(myJson, inMemoryQuery); // result: "John"
       <section id="resource-loading-nav">
           <h3>Resource Loading and Navigation</h3>
           <p>
-              In this model, the UNL query begins with a <strong>Resource Locator</strong>. This locator can be a single resource identifier (a file path or a URI) or a pattern (e.g., a glob) that resolves to a sequence of resources. This locator is immediately followed by a mandatory transformation pipe (<code>|</code>) that instructs the engine how to fetch and parse the resource(s). This corresponds to the <code>ResourceQuery</code> production in the EBNF grammar.
+              In this model, the UNL query begins with a <strong>Resource Locator</strong> (e.g., a file path or a full URI). This locator can be a single resource identifier or a pattern (e.g., a glob) that resolves to a sequence of resources. This locator is immediately followed by a mandatory transformation pipe (<code>|</code>) that instructs the engine how to fetch and parse the resource(s). This corresponds to the <code>ResourceQuery</code> production in the EBNF grammar.
           </p>
           <div class="note">
             <h4>Important Note on Resource Locators</h4>
@@ -133,7 +133,7 @@ let result2 = unl.run(anotherQuery);
     <section>
         <h3>The Aggregation Pipeline (<code>||</code>)</h3>
         <p>
-            The double pipe <code>||</code> acts as a **blocking barrier**. It instructs the engine to stop streaming, collect all results from the preceding pipeline into a full sequence in memory (<code>O(n)</code>), and then pass that complete sequence to the aggregation operators that follow. This is a conscious trade-off made by the user to enable powerful, whole-sequence operations.
+            The double pipe <code>||</code> acts as a <strong>blocking barrier</strong>. It instructs the engine to stop streaming, collect all results from the preceding pipeline into a full sequence in memory (<code>O(n)</code>), and then pass that complete sequence to the aggregation operators that follow. This is a conscious trade-off made by the user to enable powerful, whole-sequence operations.
         </p>
         <h4>Blocking Aggregate Operators</h4>
         <p>These operators <em class="rfc2119">MUST</em> be preceded by the <code>||</code> barrier, as they require the entire sequence to be available to perform their work.</p>
@@ -168,7 +168,7 @@ let result2 = unl.run(anotherQuery);
       
       <dt>The Pipe Transformation Principle (<code>|</code> Operator)</dt>
       <dd>
-        A <a>Leaf</a> is normally a terminal point of navigation. However, the pipe operator <code>|</code> allows the value of a Leaf to be re-interpreted as a new data source. This operation performs a **type-casting** of the leaf's value, creating a new, navigable <a>Node</a> structure. This mechanism is the key to nested parsing and is fundamental to UNL's power.
+        A <a>Leaf</a> is normally a terminal point of navigation. However, the pipe operator <code>|</code> allows the value of a Leaf to be re-interpreted as a new data source. This operation performs a <strong>type-casting</strong> of the leaf's value, creating a new, navigable <a>Node</a> structure. This mechanism is the key to nested parsing and is fundamental to UNL's power.
         <br/>
         Symbolically: <code>.../<a>Leaf</a>(String) |json → New <a>Node</a>(JSON)</code>
       </dd>
@@ -311,15 +311,15 @@ Q{http://xmlns.com/foaf/0.1/}Person/Q{http://xmlns.com/foaf/0.1/}knows
             <tr><th>Format</th><th>Description</th><th>Type Signature</th><th>Reference</th></tr>
         </thead>
         <tbody>
-            <tr><td><code>|xml</code></td><td>Extensible Markup Language.</td><td><code>Leaf(String) → Node</code></td><td><a href="#W3C-XML">W3C XML 1.0</a></td></tr>
-            <tr><td><code>|exi</code></td><td>Efficient XML Interchange (binary XML).</td><td><code>Leaf(Binary) → Node</code></td><td><a href="#W3C-EXI">W3C EXI 1.0</a></td></tr>
-            <tr><td><code>|json</code></td><td>JavaScript Object Notation.</td><td><code>Leaf(String) → Node</code></td><td><a href="#RFC8259">RFC 8259</a></td></tr>
+            <tr><td><code>|xml</code></td><td>Extensible Markup Language.</td><td><code>Leaf(String) → Node(XML)</code></td><td><a href="#W3C-XML">W3C XML 1.0</a></td></tr>
+            <tr><td><code>|exi</code></td><td>Efficient XML Interchange (binary XML).</td><td><code>Leaf(Binary) → Node(XML)</code></td><td><a href="#W3C-EXI">W3C EXI 1.0</a></td></tr>
+            <tr><td><code>|json</code></td><td>JavaScript Object Notation.</td><td><code>Leaf(String) → Node(Object | Array)</code></td><td><a href="#RFC8259">RFC 8259</a></td></tr>
             <tr><td><code>|csv</code></td><td>Comma-Separated Values.</td><td><code>Leaf(String) → Node(Array)</code></td><td><a href="#RFC4180">RFC 4180</a></td></tr>
             <tr><td><code>|rdf</code></td><td>Resource Description Framework.</td><td><code>Leaf(String) → Node(Graph)</code></td><td><a href="#W3C-RDF11">W3C RDF 1.1</a></td></tr>
-            <tr><td><code>|html</code></td><td>HyperText Markup Language.</td><td><code>Leaf(String) → Node</code></td><td><a href="#WHATWG-HTML">WHATWG HTML</a></td></tr>
+            <tr><td><code>|html</code></td><td>HyperText Markup Language.</td><td><code>Leaf(String) → Node(HTML)</code></td><td><a href="#WHATWG-HTML">WHATWG HTML</a></td></tr>
             <tr><td><code>|text</code></td><td>Plain text. Useful for converting binary leaves to strings.</td><td><code>Leaf(Binary) → Leaf(String)</code></td><td><a href="#RFC2046">RFC 2046</a></td></tr>
-            <tr><td><code>|yaml</code></td><td>YAML Ain't Markup Language.</td><td><code>Leaf(String) → Node</code></td><td><a href="#YAML-SPEC">YAML 1.2.2</a></td></tr>
-            <tr><td><code>|toml</code></td><td>Tom's Obvious, Minimal Language.</td><td><code>Leaf(String) → Node</code></td><td><a href="#TOML-SPEC">TOML 1.0.0</a></td></tr>
+            <tr><td><code>|yaml</code></td><td>YAML Ain't Markup Language.</td><td><code>Leaf(String) → Node(Object | Array)</code></td><td><a href="#YAML-SPEC">YAML 1.2.2</a></td></tr>
+            <tr><td><code>|toml</code></td><td>Tom's Obvious, Minimal Language.</td><td><code>Leaf(String) → Node(Object)</code></td><td><a href="#TOML-SPEC">TOML 1.0.0</a></td></tr>
         </tbody>
     </table>
 
@@ -330,11 +330,11 @@ Q{http://xmlns.com/foaf/0.1/}Person/Q{http://xmlns.com/foaf/0.1/}knows
             <tr><th>Format</th><th>Description</th><th>Type Signature</th><th>Reference</th></tr>
         </thead>
         <tbody>
-            <tr><td><code>|decomp:zip</code></td><td>ZIP file format.</td><td><code>Leaf(Binary) → Node(Archive)</code></td><td><a href="#PKWARE-ZIP">PKWARE ZIP</a></td></tr>
-            <tr><td><code>|decomp:tar</code></td><td>Tape Archive.</td><td><code>Leaf(Binary) → Node(Archive)</code></td><td><a href="#POSIX-TAR">POSIX.1-2017</a></td></tr>
+            <tr><td><code>|decomp:zip</code></td><td>ZIP file format.</td><td><code>(ResourceLocator | Leaf(Binary)) → Node(Archive)</code></td><td><a href="#PKWARE-ZIP">PKWARE ZIP</a></td></tr>
+            <tr><td><code>|decomp:tar</code></td><td>Tape Archive.</td><td><code>(ResourceLocator | Leaf(Binary)) → Node(Archive)</code></td><td><a href="#POSIX-TAR">POSIX.1-2017</a></td></tr>
             <tr><td><code>|decomp:gz</code></td><td>Gzip compression.</td><td><code>Leaf(Binary) → Leaf(Binary)</code></td><td><a href="#RFC1952">RFC 1952</a></td></tr>
-            <tr><td><code>|decomp:7z</code></td><td>7z archive format.</td><td><code>Leaf(Binary) → Node(Archive)</code></td><td><a href="#7Z-FORMAT">7-Zip Format</a></td></tr>
-            <tr><td><code>|decomp:rar</code></td><td>Roshal Archive.</td><td><code>Leaf(Binary) → Node(Archive)</code></td><td>N/A</td></tr>
+            <tr><td><code>|decomp:7z</code></td><td>7z archive format.</td><td><code>(ResourceLocator | Leaf(Binary)) → Node(Archive)</code></td><td><a href="#7Z-FORMAT">7-Zip Format</a></td></tr>
+            <tr><td><code>|decomp:rar</code></td><td>Roshal Archive.</td><td><code>(ResourceLocator | Leaf(Binary)) → Node(Archive)</code></td><td>N/A</td></tr>
             <tr><td><code>|decomp:xz</code></td><td>XZ compression.</td><td><code>Leaf(Binary) → Leaf(Binary)</code></td><td><a href="#XZ-SPEC">XZ Format</a></td></tr>
             <tr><td><code>|decomp:bz2</code></td><td>Bzip2 compression.</td><td><code>Leaf(Binary) → Leaf(Binary)</code></td><td><a href="#BZIP2-SPEC">Bzip2 Format</a></td></tr>
             <tr><td><code>|decomp:zstd</code></td><td>Zstandard compression.</td><td><code>Leaf(Binary) → Leaf(Binary)</code></td><td><a href="#RFC8878">RFC 8878</a></td></tr>
@@ -353,7 +353,7 @@ Q{http://xmlns.com/foaf/0.1/}Person/Q{http://xmlns.com/foaf/0.1/}knows
             <tr><td><code>|decode:hex</code></td><td>Hexadecimal decoding.</td><td><code>Leaf(String) → Leaf(Binary)</code></td><td><a href="#RFC4648">RFC 4648</a></td></tr>
             <tr><td><code>|decode:url</code></td><td>Percent-decoding.</td><td><code>Leaf(String) → Leaf(String)</code></td><td><a href="#RFC3986">RFC 3986</a></td></tr>
             <tr><td><code>|decode:html-entities</code></td><td>Decodes HTML/XML character entities.</td><td><code>Leaf(String) → Leaf(String)</code></td><td><a href="#WHATWG-HTML">WHATWG HTML</a></td></tr>
-            <tr><td><code>|decode:json-string</code></td><td>Un-escapes a JSON string literal.</td><td><code>Leaf(String) → Leaf(String)</code></td><td><a href="#RFC8259">RFC 8259</a></td></tr>
+            <tr><td><code>|decode:json-string</code></td><td>Un-escapes a string that was itself encoded as a JSON string literal.</td><td><code>Leaf(String) → Leaf(String)</code></td><td><a href="#RFC8259">RFC 8259</a></td></tr>
             <tr><td><code>|decode:punycode</code></td><td>Decodes Punycode strings (IDN).</td><td><code>Leaf(String) → Leaf(String)</code></td><td><a href="#RFC3492">RFC 3492</a></td></tr>
             <tr><td><code>|decode:quoted-printable</code></td><td>Decodes Quoted-Printable (MIME) content.</td><td><code>Leaf(String) → Leaf(String)</code></td><td><a href="#RFC2045">RFC 2045</a></td></tr>
         </tbody>
@@ -362,11 +362,77 @@ Q{http://xmlns.com/foaf/0.1/}Person/Q{http://xmlns.com/foaf/0.1/}knows
   
   <section id="predicates">
     <h2>Predicates (Filters)</h2>
+    <p>
+      Predicates, placed between square brackets <code>[...]</code>, are used to filter sets of <a>nodes</a>.
+    </p>
+    <pre class="example">
+// Equality test
+[@attr = "value"]
+
+// Inequality test
+[@attr != "value"]
+
+// Numeric or alphabetical comparisons
+[@attr > 100]
+
+// Regular expression matching
+[@attr ~ "^pattern.*$"]
+
+// Negation and logical operators
+[!expr]
+[expr1 & expr2]  // AND
+[expr1 | expr2]  // OR
+    </pre>
+    
+    <section id="positional-predicates">
+      <h3>Positional Predicates</h3>
+      <table>
+        <thead>
+          <tr><th>Predicate</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>[n]</code></td><td>Selects the nth element in a list (1-based indexing).</td></tr>
+          <tr><td><code>[position() = n]</code></td><td>Explicit alternative for the nth element.</td></tr>
+          <tr><td><code>[last()]</code></td><td>Selects the last element in a list.</td></tr>
+        </tbody>
+      </table>
     </section>
+  </section>
   
   <section id="functions">
     <h2>Built-in Functions</h2>
+    
+    <section id="structural-functions">
+      <h3>Structural Navigation</h3>
+      <dl>
+        <dt><code>outer(selector, n)</code></dt>
+        <dd>Navigates upwards <code>n</code> levels, jumping only over <a>nodes</a> that match the selector (e.g., <code>div|p</code>).</dd>
+        <dt><code>inner(selector)</code></dt>
+        <dd>Navigates to the terminal elements matching the selector within the current context.</dd>
+      </dl>
     </section>
+    
+    <section id="filtering-functions">
+      <h3>Hierarchical Filtering</h3>
+      <dl>
+        <dt><code>outermost(nodes)</code></dt>
+        <dd>From a set of <a>nodes</a>, keeps only those that are not contained within other <a>nodes</a> in the set.</dd>
+        <dt><code>innermost(nodes)</code></dt>
+        <dd>From a set of <a>nodes</a>, keeps only those that do not contain any other <a>nodes</a> from the set.</dd>
+      </dl>
+    </section>
+    
+    <section id="utility-functions">
+      <h3>Utility Functions</h3>
+      <dl>
+        <dt><code>only(elements)</code></dt><dd>Tests if the context contains only the specified elements.</dd>
+        <dt><code>text()</code></dt><dd>Returns the text content of a <a>node</a>.</dd>
+        <dt><code>count()</code></dt><dd>Returns the number of elements in a selection.</dd>
+        <dt><code>type()</code></dt><dd>Returns the <a data-lt="Node">node's</a> type (e.g., "element", "object", "string").</dd>
+        <dt><code>not(expr)</code></dt><dd>Negation of a predicate expression.</dd>
+      </dl>
+    </section>
+  </section>
   
   <section id="examples">
     <h2>Examples</h2>
@@ -525,6 +591,35 @@ Literal            ::= '"' ( [^"\\] | '\\' . )* '"' | "'" ( [^'\\] | '\\' . )* "
     <p>
         This section defines how UNL's abstract concepts of <a>Node</a> and <a>Leaf</a> are mapped onto the concrete structures of each major supported format. UNL is a <strong>1-based</strong> language, following the convention of XPath for all positional indexing.
     </p>
+
+    <section>
+        <h3>UNL's Conceptual Data Types</h3>
+        <p>To describe transformations accurately, UNL uses a set of conceptual data types.</p>
+        <dl>
+            <dt><code>Node</code></dt>
+            <dd>The base type for any navigable structure. It has several specializations:
+                <ul>
+                    <li><code>Node(Object)</code>: An unordered collection of key-value pairs, similar to a JSON object.</li>
+                    <li><code>Node(Array)</code>: An ordered collection of other Nodes or Leaves, similar to a JSON array or a set of CSV rows.</li>
+                    <li><code>Node(XML | HTML)</code>: A structure following the XML Infoset model, with elements, attributes, and text.</li>
+                    <li><code>Node(Graph)</code>: A structure representing RDF triples.</li>
+                    <li><code>Node(Archive)</code>: A virtual filesystem root, containing file and directory nodes.</li>
+                </ul>
+            </dd>
+            <dt><code>Leaf</code></dt>
+            <dd>The base type for any terminal, atomic value. It has several specializations:
+                <ul>
+                    <li><code>Leaf(String)</code>: A Unicode string. This is the most common leaf type.</li>
+                    <li><code>Leaf(Binary)</code>: A sequence of raw bytes. This type is not directly inspectable and <em class="rfc2119">MUST</em> be piped to another transformation (e.g., <code>|text</code>, <code>|decomp:gz</code>, or <code>|xml</code>) to be useful.</li>
+                    <li><code>Leaf(Number)</code>, <code>Leaf(Boolean)</code>, <code>Leaf(Null)</code>: Primitive data types.</li>
+                </ul>
+            </dd>
+            <dt><code>Sequence(T)</code></dt>
+            <dd>An ordered collection of items of type T, for example a <code>Sequence(Node)</code>.</dd>
+            <dt><code>ResourceLocator</code></dt>
+            <dd>A string that represents a URI or a local file path, used as the initial input for a <code>ResourceQuery</code>.</dd>
+        </dl>
+    </section>
 
     <h3>XML</h3>
     <dl>
