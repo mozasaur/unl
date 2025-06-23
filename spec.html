@@ -113,14 +113,6 @@ let result = unl.run(resourceQuery);
         
         <dt>Namespace Mappings</dt>
         <dd>For queries involving prefixed QNames (e.g., <code>foaf:name</code>), the host environment <em class="rfc2119">MUST</em> provide a mapping of prefixes to their full namespace URI strings. This is typically a hash map or dictionary. The UNL engine uses this map to resolve EQNames.
-            <pre class="example">
-// Pseudo-code for providing a namespace map
-let namespaces = {
-  "foaf": "http://xmlns.com/foaf/0.1/",
-  "dc": "http://purl.org/dc/elements/1.1/"
-};
-unl.run(context, "/*[dc:creator = 'John']", { namespaces });
-            </pre>
         </dd>
 
         <dt>Variable Bindings (Optional)</dt>
@@ -139,16 +131,17 @@ unl.run(context, "users[role = $allowed_roles]");
         </dd>
 
         <dt>Custom Function Library (Optional)</dt>
-        <dd>For advanced extensibility, an implementation <em class="rfc2119">MAY</em> allow the host language to register custom functions. These functions, written in the host language, become callable from within UNL expressions, allowing for complex logic that goes beyond the standard function set.
+        <dd>For advanced extensibility, an implementation <em class="rfc2119">MAY</em> allow the host language to register custom functions. To prevent name collisions with built-in functions, custom functions <em class="rfc2119">MUST</em> be namespaced. The host environment provides a mapping of namespace prefixes to collections of functions.
             <pre class="example">
 // Pseudo-code for registering and using a custom function
-function is_internal_email(email_string) {
-    return email_string.endsWith('@example.com');
-}
+// my_validators.js
+const is_internal_email = (email_string) => email_string.endsWith('@example.com');
+const is_strong_password = (pwd_string) => pwd_string.length > 12;
 
-unl.registerFunction("isInternal", is_internal_email);
+// Main application
+unl.registerFunctionLibrary("validate", { isInternal: is_internal_email, isStrong: is_strong_password });
 
-unl.run(context, "//user[isInternal(@email)]");
+unl.run(context, "//user[validate:isInternal(@email)]");
             </pre>
         </dd>
     </dl>
@@ -413,6 +406,17 @@ Q{http://xmlns.com/foaf/0.1/}Person/Q{http://xmlns.com/foaf/0.1/}knows
         </tbody>
     </table>
 
+    <h3>Filesystem Operations</h3>
+    <p>This operator treats a local directory path as a navigable archive-like structure.</p>
+    <table>
+        <thead>
+            <tr><th>Format</th><th>Description</th><th>Type Signature</th><th>Reference</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><code>|ls</code></td><td>Lists the contents of a local directory.</td><td><code>ResourceLocator(Directory) → Node(Archive)</code></td><td>N/A</td></tr>
+        </tbody>
+    </table>
+    
     <h3>Decompression (<code>decomp:</code> prefix)</h3>
     <p>These transformations operate on a resource or a binary <a href="#dfn-leaf">Leaf</a>, decompressing it to expose a virtual filesystem of <a>Nodes</a> or a raw binary stream.</p>
     <table>
@@ -476,52 +480,67 @@ Q{http://xmlns.com/foaf/0.1/}Person/Q{http://xmlns.com/foaf/0.1/}knows
     
     <section id="positional-predicates">
       <h3>Positional Predicates</h3>
-      <table>
-        <thead>
-          <tr><th>Predicate</th><th>Description</th></tr>
-        </thead>
-        <tbody>
-          <tr><td><code>[n]</code></td><td>Selects the nth element in a list (1-based indexing).</td></tr>
-          <tr><td><code>[position() = n]</code></td><td>Explicit alternative for the nth element.</td></tr>
-          <tr><td><code>[last()]</code></td><td>Selects the last element in a list.</td></tr>
-        </tbody>
-      </table>
+      <p>These functions are used within a predicate to filter based on position in a sequence.</p>
+        <table>
+            <thead>
+                <tr><th>Function</th><th>Description</th><th>Type Signature</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><code>position()</code></td><td>Returns the 1-based position of the current item in its sequence. `[n]` is a shorthand for `[position()=n]`.</td><td><code>() → Leaf(Number)</code></td></tr>
+                <tr><td><code>last()</code></td><td>Returns the total number of items in the current sequence.</td><td><code>() → Leaf(Number)</code></td></tr>
+            </tbody>
+        </table>
     </section>
   </section>
   
   <section id="functions">
     <h2>Built-in Functions</h2>
+    <p>Built-in functions are called without a namespace prefix (e.g., <code>text()</code>). Custom functions provided by a <a href="#host-language-integration">host language</a> <em class="rfc2119">MUST</em> use a namespace prefix (e.g., <code>myfuncs:my_func()</code>).</p>
     
     <section id="structural-functions">
       <h3>Structural Navigation</h3>
-      <dl>
-        <dt><code>outer(selector, n)</code></dt>
-        <dd>Navigates upwards <code>n</code> levels, jumping only over <a>nodes</a> that match the selector (e.g., <code>div|p</code>).</dd>
-        <dt><code>inner(selector)</code></dt>
-        <dd>Navigates to the terminal elements matching the selector within the current context.</dd>
-      </dl>
+      <p>These functions manipulate or query the structure of the data model.</p>
+      <table>
+        <thead>
+            <tr><th>Function</th><th>Description</th><th>Type Signature</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><code>outer(selector, n)</code></td><td>Navigates upwards <code>n</code> levels, jumping only over <a>nodes</a> that match the selector.</td><td><code>(Node, String, Number) → Sequence(Node)</code></td></tr>
+            <tr><td><code>inner(selector)</code></td><td>Navigates to the terminal elements matching the selector within the current context.</td><td><code>(Node, String) → Sequence(Node)</code></td></tr>
+        </tbody>
+      </table>
     </section>
     
     <section id="filtering-functions">
       <h3>Hierarchical Filtering</h3>
-      <dl>
-        <dt><code>outermost(nodes)</code></dt>
-        <dd>From a set of <a>nodes</a>, keeps only those that are not contained within other <a>nodes</a> in the set.</dd>
-        <dt><code>innermost(nodes)</code></dt>
-        <dd>From a set of <a>nodes</a>, keeps only those that do not contain any other <a>nodes</a> from the set.</dd>
-      </dl>
+      <p>These functions operate on sequences of nodes to filter them based on their hierarchical relationships.</p>
+      <table>
+        <thead>
+            <tr><th>Function</th><th>Description</th><th>Type Signature</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><code>outermost(nodes)</code></td><td>From a set of <a>nodes</a>, keeps only those that are not contained within other <a>nodes</a> in the set.</td><td><code>(Sequence(Node)) → Sequence(Node)</code></td></tr>
+            <tr><td><code>innermost(nodes)</code></td><td>From a set of <a>nodes</a>, keeps only those that do not contain any other <a>nodes</a> from the set.</td><td><code>(Sequence(Node)) → Sequence(Node)</code></td></tr>
+        </tbody>
+      </table>
     </section>
     
     <section id="utility-functions">
       <h3>Utility Functions</h3>
-      <dl>
-        <dt><code>only(elements)</code></dt><dd>Tests if the context contains only the specified elements.</dd>
-        <dt><code>text()</code></dt><dd>Returns the text content of a <a>node</a>.</dd>
-        <dt><code>lang()</code></dt><dd>When used on a literal <a>leaf</a>, returns its language tag as a string.</dd>
-        <dt><code>count()</code></dt><dd>Returns the number of elements in a selection.</dd>
-        <dt><code>type()</code></dt><dd>Returns the <a data-lt="Node">node's</a> type (e.g., "element", "object", "string").</dd>
-        <dt><code>not(expr)</code></dt><dd>Negation of a predicate expression.</dd>
-      </dl>
+      <p>These functions provide general utility for inspection and logic within queries.</p>
+      <table>
+        <thead>
+            <tr><th>Function</th><th>Description</th><th>Type Signature</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><code>only(elements)</code></td><td>Tests if the context contains only the specified elements.</td><td><code>(Node, Sequence(Node)) → Leaf(Boolean)</code></td></tr>
+            <tr><td><code>text()</code></td><td>Returns the text content of a <a>node</a>.</td><td><code>(Node) → Leaf(String)</code></td></tr>
+            <tr><td><code>lang()</code></td><td>When used on a literal <a>leaf</a>, returns its language tag as a string.</td><td><code>(Leaf) → Leaf(String)</code></td></tr>
+            <tr><td><code>count()</code></td><td>Returns the number of elements in a selection.</td><td><code>(Sequence(T)) → Leaf(Number)</code></td></tr>
+            <tr><td><code>type()</code></td><td>Returns the <a data-lt="Node">node's</a> type as a string (e.g., "element", "object").</td><td><code>(Node) → Leaf(String)</code></td></tr>
+            <tr><td><code>not(expr)</code></td><td>Negation of a predicate expression.</td><td><code>(Leaf(Boolean)) → Leaf(Boolean)</code></td></tr>
+        </tbody>
+      </table>
     </section>
   </section>
   
@@ -622,25 +641,6 @@ api/data|json/@payload|decode:base64|decomp:gz|xml//important
         <dd><a href="https://www.rfc-editor.org/info/rfc2045">Multipurpose Internet Mail Extensions (MIME) Part One: Format of Internet Message Bodies</a>, N. Freed & N. Borenstein, IETF, November 1996.</dd>
     </dl>
   </section>
-  
-  <section id="security">
-    <h2>Security Considerations</h2>
-    <p>
-        Implementers of UNL engines <em class="rfc2119">SHOULD</em> be aware of the security implications of certain features, especially when executing queries from untrusted sources.
-    </p>
-    <dl>
-        <dt>Filesystem Access (<code>|ls</code> and Resource Locators)</dt>
-        <dd>The <code>|ls</code> operator and the ability for a <code>ResourceLocator</code> to point to local file paths grant the UNL query access to the filesystem. In a controlled environment, this is a powerful feature. In a multi-tenant or server-side environment where queries may be submitted by external users, this <em class="rfc2119">MUST</em> be considered a security risk. Implementations intended for such environments <em class="rfc2119">SHOULD</em> provide mechanisms to:
-            <ul>
-                <li>Completely disable the <code>|ls</code> operator.</li>
-                <li>Sandbox all filesystem access to a specific, authorized base directory.</li>
-                <li>Validate and sanitize all <code>ResourceLocator</code> strings to prevent path traversal attacks (e.g., `../../...`).</li>
-            </ul>
-        </dd>
-        <dt>Resource Consumption</dt>
-        <dd>Queries involving wildcards like <code>**</code> (all descendants) or complex chained transformations can potentially consume significant CPU and memory resources. Implementations <em class="rfc2119">SHOULD</em> consider adding safeguards like query timeouts, depth limits, or resource quotas to prevent denial-of-service attacks.</dd>
-    </dl>
-  </section>
 
   <section id="conversion-paths" class="appendix">
     <h2>Common Transformation Paths</h2>
@@ -707,7 +707,7 @@ ResourceQuery      ::= ResourceLocator StreamingPipe ( StreamingPipe )*
 (* Form 2: Starts with a path, operates on a pre-existing context *)
 InMemoryQuery      ::= Path ( StreamingPipe )*
 
-StreamingPipe      ::= '|' ( DataFormat | DecompTransform | DecodeTransform | StreamingAggregate | FilesystemOp )
+StreamingPipe      ::= '|' ( DataFormat | FilesystemOp | DecompTransform | DecodeTransform | StreamingAggregate )
 AggregationPath    ::= BlockingAggregate ( '|' BlockingAggregate )*
 
 Path               ::= Step ( ( '/' | '?' ) Step )*
@@ -738,13 +738,13 @@ RelationalExpression ::= PrimaryFilterExpr ( ( '&lt;' | '&gt;' | '&lt;=' | '&gt;
 PrimaryFilterExpr  ::= Literal | Variable | FunctionCall | Path | LeafAccess | '!' FilterExpression | '(' FilterExpression ')' | Integer
 
 Variable           ::= '$' NCName
-FunctionCall       ::= ( 'text' | 'lang' | 'count' | 'type' | 'not' | 'outer' | 'inner' | 'outermost' | 'innermost' | 'only' | 'position' | 'last' ) '(' ( FilterExpression ( ',' FilterExpression )* )? ')'
+FunctionCall       ::= EQName '(' ( FilterExpression ( ',' FilterExpression )* )? ')'
 
 (* Operator Definitions *)
 DataFormat         ::= 'xml' | 'exi' | 'json' | 'csv' | 'rdf' | 'html' | 'text' | 'yaml' | 'toml'
+FilesystemOp       ::= 'ls'
 DecompTransform    ::= 'decomp:' ( 'zip' | 'tar' | 'gz' | '7z' | 'gzip' | 'rar' | 'xz' | 'bz2' | 'zstd' | 'brotli' )
 DecodeTransform    ::= 'decode:' ( 'base64' | 'hex' | 'url' | 'html-entities' | 'json-string' | 'punycode' | 'quoted-printable' )
-FilesystemOp       ::= 'ls'
 StreamingAggregate ::= 'count' | 'sum' | 'avg' | 'min' | 'max' | 'head' '(' Integer ')' | 'tail' '(' Integer ')'
 BlockingAggregate  ::= 'distinct' | 'order-by' '(' Path ')' | 'group-by' '(' Path ')'
 
@@ -774,7 +774,7 @@ Literal            ::= '"' ( [^"\\] | '\\' . )* '"' | "'" ( [^'\\] | '\\' . )* "
                     <li><code>Node(Array)</code>: An ordered collection of other Nodes or Leaves.</li>
                     <li><code>Node(XML | HTML)</code>: A structure compliant with the [[XML-INFOSET]].</li>
                     <li><code>Node(Graph)</code>: A structure representing RDF triples.</li>
-                    <li><code>Node(Archive)</code>: A virtual filesystem root, containing file and directory nodes.</li>
+                    <li><code>Node(Archive)</code>: A virtual filesystem root, containing file and directory nodes. This is produced by <code>|decomp:</code> operators and <code>|ls</code>.</li>
                     <li><code>Node(Group)</code>: A special node produced by the <code>group-by</code> operator, containing a key and a sequence of items.</li>
                 </ul>
             </dd>
@@ -907,6 +907,7 @@ my_archive.zip|decomp:zip/docs/report.xml/@size
 // Example 3: Filter files by metadata from a local directory, then pipe their content.
 "./src"|ls/*[@is_dir=false() and @name ~ "\.js$"]|count
     </pre>
+
   </section>
 
 </body>
