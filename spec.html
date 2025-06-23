@@ -23,7 +23,7 @@
   <section id="abstract">
     <h2>Abstract</h2>
     <p>
-      The Unified Navigation Language (UNL) is designed as an embeddable query language. This specification describes its syntax, data model, and the necessary components of an execution environment for integration into a host programming language. UNL provides a single, coherent syntax to query, navigate, and transform data across multiple structured formats, including XML, JSON, CSV, and RDF.
+      The Unified Navigation Language (UNL) is designed as an embeddable query language. This specification describes its syntax, data model, type system, and the necessary components of an execution environment for integration into a host programming language. UNL provides a single, coherent syntax to query, navigate, and transform data across multiple structured formats, including XML, JSON, CSV, and RDF.
     </p>
   </section>
 
@@ -124,15 +124,17 @@ unl.run(context, "/*[dc:creator = 'John']", { namespaces });
         </dd>
 
         <dt>Variable Bindings (Optional)</dt>
-        <dd>To write secure and reusable queries, an implementation <em class="rfc2119">SHOULD</em> support external variable binding. Variables within a UNL query are denoted with a `$` prefix (e.g., <code>$username</code>). The host environment can provide a map of variable names to their literal values.
+        <dd>To write secure and reusable queries, an implementation <em class="rfc2119">SHOULD</em> support external variable binding. Variables within a UNL query are denoted with a `$` prefix (e.g., <code>$username</code>). The host environment can provide a map of variable names to their values. These values are mapped to UNL's conceptual data types, and can be primitive <a>Leaves</a> (String, Number, Boolean) or structured <a>Nodes</a> (Object, Array).
             <pre class="example nohighlight">
 // Pseudo-code for variable binding
 let variables = {
   "user_id": 123,
-  "min_size": 1024
+  "allowed_roles": ["admin", "editor"]
 };
+// Use a numeric variable in a predicate
 unl.run(context, "users[@id = $user_id]", { variables });
-"archive.zip|decomp:zip/*[@size > $min_size]"
+// Use an array variable in a predicate
+unl.run(context, "users[role = $allowed_roles]");
             </pre>
         </dd>
 
@@ -230,6 +232,39 @@ unl.run(context, "//user[isInternal(@email)]");
     </dl>
   </section>
   
+  <section id="type-system">
+    <h2>Type System and Comparisons</h2>
+    <p>UNL operates on a set of conceptual data types defined in the <a href="#data-mapping">Data Model Mapping</a> appendix. The behavior of comparison and equality operators depends on these types.</p>
+    
+    <section>
+        <h3>Equality (`=` and `!=`)</h3>
+        <p>The equality operator compares two values. The inequality operator `!=` is defined as the negation of `=`. The rules are applied in order:</p>
+        <ol>
+            <li>If one operand is a sequence of multiple items, the comparison is true if the other operand is equal to <strong>any</strong> item in the sequence.</li>
+            <li>If both operands are of the same primitive type (e.g., Number, String, Boolean), they are compared by value.</li>
+            <li><strong>Type Coercion:</strong> If operands are of different primitive types, the engine attempts to coerce them to a common type before comparison. The primary rule is to attempt casting to a Number. For example, `5 = "5"` is true. If coercion fails, the items are not equal.</li>
+            <li>If one operand is a <a>Node</a> and the other is a primitive <a>Leaf</a>, the node's "string value" (e.g., its text content for an XML element) is used for the comparison. For example, `book/title = "UNL"` is true if the text content of the title element is "UNL".</li>
+        </ol>
+    </section>
+
+    <section>
+        <h3>Ordered Comparisons (`<`, `>`, `<=`, `>=`)</h3>
+        <p>Ordered comparisons are primarily defined for primitive, orderable types (Numbers, Strings).</p>
+        <ul>
+            <li>The same type coercion rules as for equality apply. Operands will be cast to a numeric type if possible before comparison.</li>
+            <li>Comparing a <a>Node</a> with an ordered operator uses its string value.</li>
+            <li>An ordered comparison against a sequence is generally not defined and its behavior may be implementation-dependent.</li>
+        </ul>
+    </section>
+
+    <section>
+        <h3>Sorting (`order-by`)</h3>
+        <p>
+            The `| order-by(key)` operator uses these comparison rules to sort a sequence. It evaluates the `key` expression for each item in the sequence, and then sorts the items based on the resulting key values. The host implementation <em class="rfc2119">SHOULD</em> provide options to specify data type (e.g., numeric vs. text) for sorting to avoid ambiguity.
+        </p>
+    </section>
+  </section>
+
   <section id="syntax">
     <h2>Navigation Syntax</h2>
     
@@ -587,6 +622,25 @@ api/data|json/@payload|decode:base64|decomp:gz|xml//important
         <dd><a href="https://www.rfc-editor.org/info/rfc2045">Multipurpose Internet Mail Extensions (MIME) Part One: Format of Internet Message Bodies</a>, N. Freed & N. Borenstein, IETF, November 1996.</dd>
     </dl>
   </section>
+  
+  <section id="security">
+    <h2>Security Considerations</h2>
+    <p>
+        Implementers of UNL engines <em class="rfc2119">SHOULD</em> be aware of the security implications of certain features, especially when executing queries from untrusted sources.
+    </p>
+    <dl>
+        <dt>Filesystem Access (<code>|ls</code> and Resource Locators)</dt>
+        <dd>The <code>|ls</code> operator and the ability for a <code>ResourceLocator</code> to point to local file paths grant the UNL query access to the filesystem. In a controlled environment, this is a powerful feature. In a multi-tenant or server-side environment where queries may be submitted by external users, this <em class="rfc2119">MUST</em> be considered a security risk. Implementations intended for such environments <em class="rfc2119">SHOULD</em> provide mechanisms to:
+            <ul>
+                <li>Completely disable the <code>|ls</code> operator.</li>
+                <li>Sandbox all filesystem access to a specific, authorized base directory.</li>
+                <li>Validate and sanitize all <code>ResourceLocator</code> strings to prevent path traversal attacks (e.g., `../../...`).</li>
+            </ul>
+        </dd>
+        <dt>Resource Consumption</dt>
+        <dd>Queries involving wildcards like <code>**</code> (all descendants) or complex chained transformations can potentially consume significant CPU and memory resources. Implementations <em class="rfc2119">SHOULD</em> consider adding safeguards like query timeouts, depth limits, or resource quotas to prevent denial-of-service attacks.</dd>
+    </dl>
+  </section>
 
   <section id="conversion-paths" class="appendix">
     <h2>Common Transformation Paths</h2>
@@ -653,7 +707,7 @@ ResourceQuery      ::= ResourceLocator StreamingPipe ( StreamingPipe )*
 (* Form 2: Starts with a path, operates on a pre-existing context *)
 InMemoryQuery      ::= Path ( StreamingPipe )*
 
-StreamingPipe      ::= '|' ( DataFormat | DecompTransform | DecodeTransform | StreamingAggregate )
+StreamingPipe      ::= '|' ( DataFormat | DecompTransform | DecodeTransform | StreamingAggregate | FilesystemOp )
 AggregationPath    ::= BlockingAggregate ( '|' BlockingAggregate )*
 
 Path               ::= Step ( ( '/' | '?' ) Step )*
@@ -684,12 +738,13 @@ RelationalExpression ::= PrimaryFilterExpr ( ( '&lt;' | '&gt;' | '&lt;=' | '&gt;
 PrimaryFilterExpr  ::= Literal | Variable | FunctionCall | Path | LeafAccess | '!' FilterExpression | '(' FilterExpression ')' | Integer
 
 Variable           ::= '$' NCName
-FunctionCall       ::= NCName '(' ( FilterExpression ( ',' FilterExpression )* )? ')'
+FunctionCall       ::= ( 'text' | 'lang' | 'count' | 'type' | 'not' | 'outer' | 'inner' | 'outermost' | 'innermost' | 'only' | 'position' | 'last' ) '(' ( FilterExpression ( ',' FilterExpression )* )? ')'
 
 (* Operator Definitions *)
 DataFormat         ::= 'xml' | 'exi' | 'json' | 'csv' | 'rdf' | 'html' | 'text' | 'yaml' | 'toml'
 DecompTransform    ::= 'decomp:' ( 'zip' | 'tar' | 'gz' | '7z' | 'gzip' | 'rar' | 'xz' | 'bz2' | 'zstd' | 'brotli' )
 DecodeTransform    ::= 'decode:' ( 'base64' | 'hex' | 'url' | 'html-entities' | 'json-string' | 'punycode' | 'quoted-printable' )
+FilesystemOp       ::= 'ls'
 StreamingAggregate ::= 'count' | 'sum' | 'avg' | 'min' | 'max' | 'head' '(' Integer ')' | 'tail' '(' Integer ')'
 BlockingAggregate  ::= 'distinct' | 'order-by' '(' Path ')' | 'group-by' '(' Path ')'
 
@@ -825,8 +880,8 @@ logs.csv|csv/*[1]/@*[2]                   // Returns leaf "ERROR"
 // Returns leaf "Spécification UNL"
     </pre>
 
-    <h3>Archives (zip, tar, etc.)</h3>
-    <p>Archives and local filesystems (via <code>|ls</code>) are treated as a virtual filesystem. Both files and directories are modeled as <a>Nodes</a> to allow querying their metadata.</p>
+    <h3>Archives and Filesystems</h3>
+    <p>Archives (via <code>decomp:</code>) and local filesystems (via <code>|ls</code>) are treated as a virtual filesystem. Both files and directories are modeled as <a>Nodes</a> to allow querying their metadata.</p>
     <dl>
         <dt><a>Node</a></dt>
         <dd>A directory or a file. Directory nodes can contain other nodes. File nodes are terminal for path navigation but expose metadata leaves.</dd>
@@ -843,16 +898,15 @@ logs.csv|csv/*[1]/@*[2]                   // Returns leaf "ERROR"
         </dd>
     </dl>
      <pre class="example nohighlight">
-// Example 1: Select a file node and pipe its content to the XML parser.
-my_archive.zip|decomp:zip/docs/report.xml|xml//title
+// Example 1: List contents of a local directory
+"./src"|ls/*
 
-// Example 2: Get the size of a specific file.
+// Example 2: Get the size of a specific file in a ZIP archive.
 my_archive.zip|decomp:zip/docs/report.xml/@size
 
-// Example 3: Filter files by metadata, then pipe their content.
-./my_project/|ls/*[@is_dir=false() and @size>1000]|xml//important
+// Example 3: Filter files by metadata from a local directory, then pipe their content.
+"./src"|ls/*[@is_dir=false() and @name ~ "\.js$"]|count
     </pre>
-
   </section>
 
 </body>
