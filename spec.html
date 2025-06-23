@@ -41,7 +41,7 @@
     <ul>
       <li><strong>Optional Navigation <code>?</code>:</strong> A unique syntax to elegantly handle variable or incomplete data structures.</li>
       <li><strong>Node/Leaf Distinction (<code>@</code>):</strong> Provides fundamental semantic clarity by distinguishing between navigable containers and final values.</li>
-      <li><strong>Advanced Structural Navigation (<code>outer()</code>):</strong> Enables complex, type-based navigation jumps that are difficult to achieve with other languages.</li>
+      <li><strong>Advanced Structural Navigation (<code>outer()</code>, <code>root()</code>):</strong> Enables complex, type-based navigation jumps that are difficult to achieve with other languages.</li>
       <li><strong>Fluid Transformations (<code>|format</code>):</strong> The pipe operator allows for on-the-fly data conversion within a single navigation expression.</li>
       <li><strong>Native URI and Namespace Support:</strong> Full integration with semantic web standards (RDF, XML) via EQName syntax.</li>
       <li><strong>Unified Syntax:</strong> One language to rule all your formats.</li>
@@ -136,19 +136,14 @@ unl.run(context, "users[role = $allowed_roles]");
 // Pseudo-code for registering and using a custom function
 // my_validators.js
 const is_internal_email = (email_string) => email_string.endsWith('@example.com');
-const is_strong_password = (pwd_string) => pwd_string.length > 12;
 
 // Main application
-unl.registerFunctionLibrary("validate", { isInternal: is_internal_email, isStrong: is_strong_password });
+unl.registerFunctionLibrary("validate", { isInternal: is_internal_email });
 
 unl.run(context, "//user[validate:isInternal(@email)]");
             </pre>
         </dd>
     </dl>
-    <div class="note">
-        <h4>Note on `current()`</h4>
-        <p>A dedicated `current()` function is not necessary in UNL. The `.` operator always refers to the current context node at any point in a path, which serves the same purpose in a more concise, standard way.</p>
-    </div>
   </section>
   
   <section id="sequence-handling">
@@ -268,12 +263,12 @@ unl.run(context, "//user[validate:isInternal(@email)]");
           <tr><th>Operator</th><th>Description</th></tr>
         </thead>
         <tbody>
-          <tr><td><code>/</code></td><td>Mandatory navigation to a child. Must exist.</td></tr>
+          <tr><td><code>/</code></td><td>When used between steps, navigates to a child. At the start of a path, denotes an absolute path from the document root.</td></tr>
           <tr><td><code>?</code></td><td>Optional navigation between nodes. Allows chaining paths that may not exist (<code>a?b</code> is equivalent to <code>a</code> or <code>a/b</code>).</td></tr>
           <tr><td><code>?</code> (wildcard)</td><td>Single wildcard when used alone. Represents any single child (<code>a/?/c</code>).</td></tr>
           <tr><td><code>*</code></td><td>Multiple wildcard. Represents all child <a>nodes</a>.</td></tr>
           <tr><td><code>**</code></td><td>Descendant wildcard. Represents all descendant <a>nodes</a>.</td></tr>
-          <tr><td><code>.</code></td><td>Represents the current <a>node</a>.</td></tr>
+          <tr><td><code>.</code></td><td>Represents the current context <a>node</a>.</td></tr>
           <tr><td><code>@name</code></td><td>Accesses a named <a href="#dfn-leaf">leaf</a>.</td></tr>
           <tr><td><code>@*</code></td><td>Selects all <a href="#dfn-leaf">leaves</a> of the current <a>node</a> as an ordered collection.</td></tr>
           <tr><td><code>#id</code></td><td>Direct access to a <a>node</a> by its ID or URI.</td></tr>
@@ -457,25 +452,12 @@ Q{http://xmlns.com/foaf/0.1/}Person/Q{http://xmlns.com/foaf/0.1/}knows
   <section id="predicates">
     <h2>Predicates (Filters)</h2>
     <p>
-      Predicates, placed between square brackets <code>[...]</code>, are used to filter sets of <a>nodes</a>.
+      Predicates, placed between square brackets <code>[...]</code>, are used to filter sets of <a>nodes</a>. Path expressions inside a predicate can be absolute (starting with <code>/</code>) or relative to the current node.
     </p>
-    <pre class="example">
-// Equality test
-[@attr = "value"]
-
-// Inequality test
-[@attr != "value"]
-
-// Numeric or alphabetical comparisons
-[@attr > 100]
-
-// Regular expression matching
-[@attr ~ "^pattern.*$"]
-
-// Negation and logical operators
-[!expr]
-[expr1 & expr2]  // AND
-[expr1 | expr2]  // OR
+    <pre class="example nohighlight">
+// Filter items where category leaf matches a global configuration value
+// The path /config/default_category starts from the document root
+//item[@category = /config/default_category]
     </pre>
     
     <section id="positional-predicates">
@@ -505,6 +487,7 @@ Q{http://xmlns.com/foaf/0.1/}Person/Q{http://xmlns.com/foaf/0.1/}knows
             <tr><th>Function</th><th>Description</th><th>Type Signature</th></tr>
         </thead>
         <tbody>
+            <tr><td><code>root()</code></td><td>Returns the root <a>node</a> of the document. Equivalent to starting a path with <code>/</code>.</td><td><code>() → Node</code></td></tr>
             <tr><td><code>outer(selector, n)</code></td><td>Navigates upwards <code>n</code> levels, jumping only over <a>nodes</a> that match the selector.</td><td><code>(Node, String, Number) → Sequence(Node)</code></td></tr>
             <tr><td><code>inner(selector)</code></td><td>Navigates to the terminal elements matching the selector within the current context.</td><td><code>(Node, String) → Sequence(Node)</code></td></tr>
         </tbody>
@@ -710,12 +693,11 @@ InMemoryQuery      ::= Path ( StreamingPipe )*
 StreamingPipe      ::= '|' ( DataFormat | FilesystemOp | DecompTransform | DecodeTransform | StreamingAggregate )
 AggregationPath    ::= BlockingAggregate ( '|' BlockingAggregate )*
 
-Path               ::= Step ( ( '/' | '?' ) Step )*
+Path               ::= ( '/' )? Step ( ( '/' | '?' ) Step )*
 Step               ::= ( PrimaryStep | Axis ) Predicate*
 
-PrimaryStep        ::= NameTest | Wildcard | LeafAccess | IdAccess | '.' | '(' Path ')'
+PrimaryStep        ::= NameTest | Wildcard | LeafAccess | IdAccess | '.' | '(' Path ')' | FunctionCall
 
-(* A NameTest can be a standard EQName or a quoted literal string *)
 NameTest           ::= EQName | Literal
 LeafAccess         ::= '@' ( EQName | '*' | Literal )
 
