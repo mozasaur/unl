@@ -23,7 +23,7 @@
   <section id="abstract">
     <h2>Abstract</h2>
     <p>
-      The Unified Navigation Language (UNL) provides a single, coherent syntax to query, navigate, and transform data across multiple structured formats such as XML, JSON, CSV, and RDF. It draws inspiration from proven concepts like XPath and CSS selectors while introducing innovative features like optional navigation, built-in format transformation, and advanced structural navigation functions. The goal is to offer a single, intuitive language for all data formats.
+      The Unified Navigation Language (UNL) provides a single, coherent syntax to query, navigate, and transform data across multiple structured formats such as XML, JSON, CSV, and RDF. It draws inspiration from proven concepts like XPath and CSS selectors while introducing innovative features like optional navigation, built-in format transformation, advanced structural navigation functions, and a powerful sequence processing pipeline. The goal is to offer a single, intuitive language for all data formats.
     </p>
   </section>
 
@@ -56,16 +56,16 @@
   </section>
 
   <section id="conformance">
-  </section>
+      </section>
   
   <section id="execution-models">
       <h2>Operating Models</h2>
-      <p>A UNL query is always evaluated against an initial context. The way this context is provided defines the two operating models for the language, which are formally described by the <a href="#ebnf-grammar">EBNF grammar</a>'s top-level <code>UNLQuery</code> rule.</p>
+      <p>A UNL query is always evaluated against an initial context. The initial context can be a single document or a sequence of documents.</p>
       
       <section id="in-memory-nav">
           <h3>In-Memory Navigation</h3>
           <p>
-              In this model, the UNL engine operates on a data structure that is already parsed and held in memory (e.g., an XML DOM object, a JSON object). The UNL query is an expression that navigates this existing structure directly. This corresponds to the <code>InMemoryQuery</code> production in the EBNF grammar.
+              In this model, the UNL engine operates on a data structure that is already parsed and held in memory. The context can be a single root <a>Node</a> or a sequence of <a>Nodes</a>. The UNL query is an expression that navigates this existing structure directly. This corresponds to the <code>InMemoryQuery</code> production in the EBNF grammar.
           </p>
           <pre class="example">
 // Pseudo-code for a UNL library
@@ -80,7 +80,7 @@ let result = unl.run(myJson, inMemoryQuery); // result: "John"
       <section id="resource-loading-nav">
           <h3>Resource Loading and Navigation</h3>
           <p>
-              In this model, the UNL query begins with a <strong>Resource Locator</strong> (e.g., a file path or a full URI). This locator is immediately followed by a mandatory transformation pipe (<code>|</code>) that instructs the engine how to fetch and parse the resource into a navigable structure. This corresponds to the <code>ResourceQuery</code> production in the EBNF grammar.
+              In this model, the UNL query begins with a <strong>Resource Locator</strong>. This locator can be a single resource identifier (a file path or a URI) or a pattern (e.g., a glob) that resolves to a sequence of resources. This locator is immediately followed by a mandatory transformation pipe (<code>|</code>) that instructs the engine how to fetch and parse the resource(s). This corresponds to the <code>ResourceQuery</code> production in the EBNF grammar.
           </p>
           <div class="note">
             <h4>Important Note on Resource Locators</h4>
@@ -99,6 +99,59 @@ let result1 = unl.run(resourceQuery);
 let result2 = unl.run(anotherQuery);
           </pre>
       </section>
+  </section>
+
+  <section id="sequence-handling">
+    <h2>Sequence Transformations</h2>
+    <p>
+        UNL includes a powerful two-stage pipeline model to process sequences of results. This allows for both efficient, low-memory streaming and complex, full-sequence aggregations.
+    </p>
+    
+    <section>
+        <h3>The Streaming Pipeline (<code>|</code>)</h3>
+        <p>
+            The default pipeline, using the single pipe <code>|</code>, operates in a streaming fashion. Each operator processes items one by one as they arrive, typically with minimal memory overhead (<code>O(1)</code> or `O(k)`). This model is highly efficient for large datasets. It includes format parsing, decoding, and a class of "streamable aggregates".
+        </p>
+        <h4>Streamable Aggregate Operators</h4>
+        <p>These operators can produce their result without needing to store the entire sequence in memory. They operate in the standard streaming pipeline.</p>
+        <table>
+            <thead>
+                <tr><th>Operator</th><th>Description</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><code>| head(n)</code></td><td>Takes the first <code>n</code> items from the stream and terminates the pipeline.</td></tr>
+                <tr><td><code>| tail(n)</code></td><td>Maintains a fixed-size buffer to output the last <code>n</code> items once the stream ends.</td></tr>
+                <tr><td><code>| count</code></td><td>Counts all items in the stream, using constant memory, and outputs a single leaf with the total at the end.</td></tr>
+                <tr><td><code>| sum</code></td><td>Calculates the sum of all items in a numeric stream.</td></tr>
+                <tr><td><code>| avg</code></td><td>Calculates the average of all items in a numeric stream.</td></tr>
+                <tr><td><code>| min</code></td><td>Finds the minimum value in a stream.</td></tr>
+                <tr><td><code>| max</code></td><td>Finds the maximum value in a stream.</td></tr>
+            </tbody>
+        </table>
+    </section>
+    
+    <section>
+        <h3>The Aggregation Pipeline (<code>||</code>)</h3>
+        <p>
+            The double pipe <code>||</code> acts as a **blocking barrier**. It instructs the engine to stop streaming, collect all results from the preceding pipeline into a full sequence in memory (<code>O(n)</code>), and then pass that complete sequence to the aggregation operators that follow. This is a conscious trade-off made by the user to enable powerful, whole-sequence operations.
+        </p>
+        <h4>Blocking Aggregate Operators</h4>
+        <p>These operators <em class="rfc2119">MUST</em> be preceded by the <code>||</code> barrier, as they require the entire sequence to be available to perform their work.</p>
+        <table>
+            <thead>
+                <tr><th>Operator</th><th>Description</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><code>| order-by(key)</code></td><td>Sorts the entire sequence based on a key expression. Direction (asc/desc) and type (numeric/text) can be specified.</td></tr>
+                <tr><td><code>| group-by(key)</code></td><td>Groups items in the sequence based on a key expression. Produces a sequence of group nodes.</td></tr>
+                <tr><td><code>| distinct</code></td><td>Removes duplicate items from the sequence.</td></tr>
+            </tbody>
+        </table>
+        <div class="note">
+            <h4>Final Query Results</h4>
+            <p>The result of a UNL query is the data produced by the final operator in the pipeline. If the pipeline ends with an aggregation operator like <code>order-by</code> or `distinct`, the result is a sequence (an array of nodes or leaves). The task of serializing this final sequence into a specific document format (e.g., by wrapping it in a root element) is left to the calling application or environment.</p>
+        </div>
+    </section>
   </section>
 
   <section id="core-concepts">
@@ -417,6 +470,8 @@ http://example.com/data.zip|decomp:zip/docs/report.xml|xml//title
         <dd><a href="https://www.rfc-editor.org/info/rfc2119">Key words for use in RFCs to Indicate Requirement Levels</a>, S. Bradner, IETF, March 1997.</dd>
         <dt id="RFC8174">RFC 8174</dt>
         <dd><a href="https://www.rfc-editor.org/info/rfc8174">Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words</a>, B. Leiba, IETF, May 2017.</dd>
+        <dt id="ISO-IEC-14977">ISO/IEC 14977:1996</dt>
+        <dd><a href="https://www.iso.org/standard/26153.html">Information technology — Syntactic metalanguage — Extended BNF</a>.</dd>
         <dt id="W3C-XML">W3C XML 1.0</dt>
         <dd><a href="https://www.w3.org/TR/xml/">Extensible Markup Language (XML) 1.0 (Fifth Edition)</a>, T. Bray, et al., W3C Recommendation, 26 November 2008.</dd>
         <dt id="XML-NAMES">XML-NAMES</dt>
@@ -468,18 +523,19 @@ http://example.com/data.zip|decomp:zip/docs/report.xml|xml//title
   
   <section id="ebnf-grammar" class="appendix">
     <h2>EBNF Grammar for UNL v1.0</h2>
-    <p>This appendix provides a non-normative EBNF grammar for UNL. It formally describes the two query models and the quoting mechanism for names.</p>
+    <p>This appendix provides a non-normative grammar for the Unified Navigation Language, with a syntax conforming to the EBNF standard [[ISO-IEC-14977]].</p>
     <pre class="grammar">
-(* A full UNL query can be one of two forms *)
-UNLQuery           ::= ResourceQuery | InMemoryQuery
+(* A full query can have an optional, final aggregation stage *)
+UNLQuery           ::= ( ResourceQuery | InMemoryQuery ) ( '||' AggregationPath )?
 
 (* Form 1: Starts with a resource, requires a parsing transformation *)
-ResourceQuery      ::= ResourceLocator TransformationPipe ( TransformationPipe )*
+ResourceQuery      ::= ResourceLocator StreamingPipe ( StreamingPipe )*
 
 (* Form 2: Starts with a path, operates on a pre-existing context *)
-InMemoryQuery      ::= Path ( TransformationPipe )*
+InMemoryQuery      ::= Path ( StreamingPipe )*
 
-TransformationPipe ::= '|' Transformation
+StreamingPipe      ::= '|' ( DataFormat | DecompTransform | DecodeTransform | StreamingAggregate )
+AggregationPath    ::= BlockingAggregate ( '|' BlockingAggregate )*
 
 Path               ::= Step ( ( '/' | '?' ) Step )*
 Step               ::= ( PrimaryStep | Axis ) Predicate*
@@ -510,11 +566,12 @@ PrimaryFilterExpr  ::= Literal | FunctionCall | Path | LeafAccess | '!' FilterEx
 
 FunctionCall       ::= NCName '(' ( FilterExpression ( ',' FilterExpression )* )? ')'
 
-Transformation     ::= DataFormat | DecompTransform | DecodeTransform
-
+(* Operator Definitions *)
 DataFormat         ::= 'xml' | 'exi' | 'json' | 'csv' | 'rdf' | 'html' | 'text' | 'yaml' | 'toml'
 DecompTransform    ::= 'decomp:' ( 'zip' | 'tar' | 'gz' | '7z' | 'gzip' | 'rar' | 'xz' | 'bz2' | 'zstd' | 'brotli' )
 DecodeTransform    ::= 'decode:' ( 'base64' | 'hex' | 'url' | 'html-entities' | 'json-string' | 'punycode' | 'quoted-printable' )
+StreamingAggregate ::= 'count' | 'sum' | 'avg' | 'min' | 'max' | 'head' '(' Integer ')' | 'tail' '(' Integer ')'
+BlockingAggregate  ::= 'distinct' | 'order-by' '(' Path ')' | 'group-by' '(' Path ')'
 
 (* Lexical Definitions (Informal) *)
 ResourceLocator    ::= (* A literal string representing a URI or file path. It uses standard '/' separators and does not support UNL operators like '?' or '@'. UNL navigation begins after the first pipe. *)
