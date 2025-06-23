@@ -100,7 +100,7 @@ let result2 = unl.run(anotherQuery);
           </pre>
       </section>
   </section>
-
+  
   <section id="sequence-handling">
     <h2>Sequence Transformations</h2>
     <p>
@@ -299,136 +299,74 @@ Q{http://xmlns.com/foaf/0.1/}Person/Q{http://xmlns.com/foaf/0.1/}knows
     <p>
       The pipe operator (<code>|</code>) is used for transformations. As described in the <a href="#execution-models">Operating Models</a>, the first pipe in a <code>ResourceQuery</code> serves to load and parse a resource. Subsequent pipes transform the current selection, often by type-casting a <a>Leaf</a>'s value into a new <a>Node</a> structure, as defined in the <a href="#core-concepts">Core Principles</a>.
     </p>
+    <div class="note">
+      <h4>Note on Sequences</h4>
+      <p>All transformations described below adhere to the Implicit Iteration principle. When the input is a <code>Sequence(T)</code>, the output will be a <code>Sequence(U)</code>, where the transformation <code>T → U</code> has been applied to each item.</p>
+    </div>
     
     <h3>Data Serialization Formats</h3>
-    <p>These transformations parse a string-based <a href="#dfn-leaf">Leaf</a> or resource into a navigable <a>Node</a> structure. Symbolically, they perform the operation: <code>Leaf(String) → Node</code>.</p>
+    <p>These transformations parse a string-based <a href="#dfn-leaf">Leaf</a> or resource into a navigable <a>Node</a> structure.</p>
     <table>
         <thead>
-            <tr><th>Format</th><th>Description</th><th>Reference</th></tr>
+            <tr><th>Format</th><th>Description</th><th>Type Signature</th><th>Reference</th></tr>
         </thead>
         <tbody>
-            <tr><td><code>|xml</code></td><td>Extensible Markup Language, a text-based format for representing structured data.</td><td><a href="#W3C-XML">W3C XML 1.0</a></td></tr>
-            <tr><td><code>|exi</code></td><td>Efficient XML Interchange, a binary compact representation for XML.</td><td><a href="#W3C-EXI">W3C EXI 1.0</a></td></tr>
-            <tr><td><code>|json</code></td><td>JavaScript Object Notation, a lightweight data-interchange format.</td><td><a href="#RFC8259">RFC 8259</a></td></tr>
-            <tr><td><code>|csv</code></td><td>Comma-Separated Values, a plain text format for tabular data.</td><td><a href="#RFC4180">RFC 4180</a></td></tr>
-            <tr><td><code>|rdf</code></td><td>Resource Description Framework, a framework for representing information in the Web. Handled as RDF/XML or Turtle.</td><td><a href="#W3C-RDF11">W3C RDF 1.1</a></td></tr>
-            <tr><td><code>|html</code></td><td>HyperText Markup Language, the standard markup language for documents designed to be displayed in a web browser.</td><td><a href="#WHATWG-HTML">WHATWG HTML</a></td></tr>
-            <tr><td><code>|text</code></td><td>Plain text, as defined by MIME (Multipurpose Internet Mail Extensions).</td><td><a href="#RFC2046">RFC 2046</a></td></tr>
-            <tr><td><code>|yaml</code></td><td>YAML Ain't Markup Language, a human-friendly data serialization standard.</td><td><a href="#YAML-SPEC">YAML 1.2.2</a></td></tr>
-            <tr><td><code>|toml</code></td><td>Tom's Obvious, Minimal Language, a minimal configuration file format.</td><td><a href="#TOML-SPEC">TOML 1.0.0</a></td></tr>
+            <tr><td><code>|xml</code></td><td>Extensible Markup Language.</td><td><code>Leaf(String) → Node</code></td><td><a href="#W3C-XML">W3C XML 1.0</a></td></tr>
+            <tr><td><code>|exi</code></td><td>Efficient XML Interchange (binary XML).</td><td><code>Leaf(Binary) → Node</code></td><td><a href="#W3C-EXI">W3C EXI 1.0</a></td></tr>
+            <tr><td><code>|json</code></td><td>JavaScript Object Notation.</td><td><code>Leaf(String) → Node</code></td><td><a href="#RFC8259">RFC 8259</a></td></tr>
+            <tr><td><code>|csv</code></td><td>Comma-Separated Values.</td><td><code>Leaf(String) → Node(Array)</code></td><td><a href="#RFC4180">RFC 4180</a></td></tr>
+            <tr><td><code>|rdf</code></td><td>Resource Description Framework.</td><td><code>Leaf(String) → Node(Graph)</code></td><td><a href="#W3C-RDF11">W3C RDF 1.1</a></td></tr>
+            <tr><td><code>|html</code></td><td>HyperText Markup Language.</td><td><code>Leaf(String) → Node</code></td><td><a href="#WHATWG-HTML">WHATWG HTML</a></td></tr>
+            <tr><td><code>|text</code></td><td>Plain text. Useful for converting binary leaves to strings.</td><td><code>Leaf(Binary) → Leaf(String)</code></td><td><a href="#RFC2046">RFC 2046</a></td></tr>
+            <tr><td><code>|yaml</code></td><td>YAML Ain't Markup Language.</td><td><code>Leaf(String) → Node</code></td><td><a href="#YAML-SPEC">YAML 1.2.2</a></td></tr>
+            <tr><td><code>|toml</code></td><td>Tom's Obvious, Minimal Language.</td><td><code>Leaf(String) → Node</code></td><td><a href="#TOML-SPEC">TOML 1.0.0</a></td></tr>
         </tbody>
     </table>
 
     <h3>Decompression (<code>decomp:</code> prefix)</h3>
-    <p>These transformations operate on a resource or a binary <a href="#dfn-leaf">Leaf</a>, decompressing it to expose a virtual filesystem of <a>Nodes</a> (directories and files). Symbolically: <code>Leaf(Binary) → Node(Archive)</code>.</p>
+    <p>These transformations operate on a resource or a binary <a href="#dfn-leaf">Leaf</a>, decompressing it to expose a virtual filesystem of <a>Nodes</a>.</p>
     <table>
         <thead>
-            <tr><th>Format</th><th>Description</th><th>Reference</th></tr>
+            <tr><th>Format</th><th>Description</th><th>Type Signature</th><th>Reference</th></tr>
         </thead>
         <tbody>
-            <tr><td><code>|decomp:zip</code></td><td>ZIP file format, a widely used archive format that supports lossless data compression.</td><td><a href="#PKWARE-ZIP">PKWARE ZIP</a></td></tr>
-            <tr><td><code>|decomp:tar</code></td><td>Tape Archive, a file format for collecting multiple files into one archive file for distribution or backup.</td><td><a href="#POSIX-TAR">POSIX.1-2017</a></td></tr>
-            <tr><td><code>|decomp:gz</code></td><td>Gzip, a file format and a software application used for file compression and decompression.</td><td><a href="#RFC1952">RFC 1952</a></td></tr>
-            <tr><td><code>|decomp:7z</code></td><td>7z, an archive format that provides a high compression ratio.</td><td><a href="#7Z-FORMAT">7-Zip Format</a></td></tr>
-            <tr><td><code>|decomp:rar</code></td><td>Roshal Archive, a popular proprietary archive file format.</td><td>N/A</td></tr>
-            <tr><td><code>|decomp:xz</code></td><td>XZ, a compression format based on the LZMA2 algorithm, common in software distribution.</td><td><a href="#XZ-SPEC">XZ Format</a></td></tr>
-            <tr><td><code>|decomp:bz2</code></td><td>Bzip2, a high-quality data compressor.</td><td><a href="#BZIP2-SPEC">Bzip2 Format</a></td></tr>
-            <tr><td><code>|decomp:zstd</code></td><td>Zstandard, a fast lossless compression algorithm.</td><td><a href="#RFC8878">RFC 8878</a></td></tr>
-            <tr><td><code>|decomp:brotli</code></td><td>Brotli, a generic-purpose lossless compression algorithm, common for web content.</td><td><a href="#RFC7932">RFC 7932</a></td></tr>
+            <tr><td><code>|decomp:zip</code></td><td>ZIP file format.</td><td><code>Leaf(Binary) → Node(Archive)</code></td><td><a href="#PKWARE-ZIP">PKWARE ZIP</a></td></tr>
+            <tr><td><code>|decomp:tar</code></td><td>Tape Archive.</td><td><code>Leaf(Binary) → Node(Archive)</code></td><td><a href="#POSIX-TAR">POSIX.1-2017</a></td></tr>
+            <tr><td><code>|decomp:gz</code></td><td>Gzip compression.</td><td><code>Leaf(Binary) → Leaf(Binary)</code></td><td><a href="#RFC1952">RFC 1952</a></td></tr>
+            <tr><td><code>|decomp:7z</code></td><td>7z archive format.</td><td><code>Leaf(Binary) → Node(Archive)</code></td><td><a href="#7Z-FORMAT">7-Zip Format</a></td></tr>
+            <tr><td><code>|decomp:rar</code></td><td>Roshal Archive.</td><td><code>Leaf(Binary) → Node(Archive)</code></td><td>N/A</td></tr>
+            <tr><td><code>|decomp:xz</code></td><td>XZ compression.</td><td><code>Leaf(Binary) → Leaf(Binary)</code></td><td><a href="#XZ-SPEC">XZ Format</a></td></tr>
+            <tr><td><code>|decomp:bz2</code></td><td>Bzip2 compression.</td><td><code>Leaf(Binary) → Leaf(Binary)</code></td><td><a href="#BZIP2-SPEC">Bzip2 Format</a></td></tr>
+            <tr><td><code>|decomp:zstd</code></td><td>Zstandard compression.</td><td><code>Leaf(Binary) → Leaf(Binary)</code></td><td><a href="#RFC8878">RFC 8878</a></td></tr>
+            <tr><td><code>|decomp:brotli</code></td><td>Brotli compression.</td><td><code>Leaf(Binary) → Leaf(Binary)</code></td><td><a href="#RFC7932">RFC 7932</a></td></tr>
         </tbody>
     </table>
 
     <h3>Decoding (<code>decode:</code> prefix)</h3>
-    <p>These are intermediate transformations that type-cast a <a href="#dfn-leaf">Leaf</a> from one string representation to another, which can then be piped into further transformations. Symbolically: <code>Leaf(EncodedString) → Leaf(DecodedString)</code>.</p>
+    <p>These are intermediate transformations that type-cast a <a href="#dfn-leaf">Leaf</a>'s value.</p>
     <table>
         <thead>
-            <tr><th>Format</th><th>Description</th><th>Reference</th></tr>
+            <tr><th>Format</th><th>Description</th><th>Type Signature</th><th>Reference</th></tr>
         </thead>
         <tbody>
-            <tr><td><code>|decode:base64</code></td><td>Base64 encoding scheme, used to represent binary data in an ASCII string format.</td><td><a href="#RFC4648">RFC 4648</a></td></tr>
-            <tr><td><code>|decode:hex</code></td><td>Hexadecimal (Base16) encoding, used to represent binary data.</td><td><a href="#RFC4648">RFC 4648</a></td></tr>
-            <tr><td><code>|decode:url</code></td><td>Percent-Encoding, used to encode information in a Uniform Resource Identifier (URI).</td><td><a href="#RFC3986">RFC 3986</a></td></tr>
-            <tr><td><code>|decode:html-entities</code></td><td>Decodes HTML/XML character entities (e.g., &amp;amp;) into their corresponding characters.</td><td><a href="#WHATWG-HTML">WHATWG HTML</a></td></tr>
-            <tr><td><code>|decode:json-string</code></td><td>Un-escapes a string that was itself encoded as a JSON string literal (e.g., handles \\").</td><td><a href="#RFC8259">RFC 8259</a></td></tr>
-            <tr><td><code>|decode:punycode</code></td><td>Decodes Punycode-encoded strings, used for Internationalized Domain Names.</td><td><a href="#RFC3492">RFC 3492</a></td></tr>
-            <tr><td><code>|decode:quoted-printable</code></td><td>Decodes content using the Quoted-Printable encoding from MIME standards.</td><td><a href="#RFC2045">RFC 2045</a></td></tr>
+            <tr><td><code>|decode:base64</code></td><td>Base64 decoding.</td><td><code>Leaf(String) → Leaf(Binary)</code></td><td><a href="#RFC4648">RFC 4648</a></td></tr>
+            <tr><td><code>|decode:hex</code></td><td>Hexadecimal decoding.</td><td><code>Leaf(String) → Leaf(Binary)</code></td><td><a href="#RFC4648">RFC 4648</a></td></tr>
+            <tr><td><code>|decode:url</code></td><td>Percent-decoding.</td><td><code>Leaf(String) → Leaf(String)</code></td><td><a href="#RFC3986">RFC 3986</a></td></tr>
+            <tr><td><code>|decode:html-entities</code></td><td>Decodes HTML/XML character entities.</td><td><code>Leaf(String) → Leaf(String)</code></td><td><a href="#WHATWG-HTML">WHATWG HTML</a></td></tr>
+            <tr><td><code>|decode:json-string</code></td><td>Un-escapes a JSON string literal.</td><td><code>Leaf(String) → Leaf(String)</code></td><td><a href="#RFC8259">RFC 8259</a></td></tr>
+            <tr><td><code>|decode:punycode</code></td><td>Decodes Punycode strings (IDN).</td><td><code>Leaf(String) → Leaf(String)</code></td><td><a href="#RFC3492">RFC 3492</a></td></tr>
+            <tr><td><code>|decode:quoted-printable</code></td><td>Decodes Quoted-Printable (MIME) content.</td><td><code>Leaf(String) → Leaf(String)</code></td><td><a href="#RFC2045">RFC 2045</a></td></tr>
         </tbody>
     </table>
   </section>
   
   <section id="predicates">
     <h2>Predicates (Filters)</h2>
-    <p>
-      Predicates, placed between square brackets <code>[...]</code>, are used to filter sets of <a>nodes</a>.
-    </p>
-    <pre class="example">
-// Equality test
-[@attr = "value"]
-
-// Inequality test
-[@attr != "value"]
-
-// Numeric or alphabetical comparisons
-[@attr > 100]
-
-// Regular expression matching
-[@attr ~ "^pattern.*$"]
-
-// Negation and logical operators
-[!expr]
-[expr1 & expr2]  // AND
-[expr1 | expr2]  // OR
-    </pre>
-    
-    <section id="positional-predicates">
-      <h3>Positional Predicates</h3>
-      <table>
-        <thead>
-          <tr><th>Predicate</th><th>Description</th></tr>
-        </thead>
-        <tbody>
-          <tr><td><code>[n]</code></td><td>Selects the nth element in a list (1-based indexing).</td></tr>
-          <tr><td><code>[position() = n]</code></td><td>Explicit alternative for the nth element.</td></tr>
-          <tr><td><code>[last()]</code></td><td>Selects the last element in a list.</td></tr>
-        </tbody>
-      </table>
     </section>
-  </section>
   
   <section id="functions">
     <h2>Built-in Functions</h2>
-    
-    <section id="structural-functions">
-      <h3>Structural Navigation</h3>
-      <dl>
-        <dt><code>outer(selector, n)</code></dt>
-        <dd>Navigates upwards <code>n</code> levels, jumping only over <a>nodes</a> that match the selector (e.g., <code>div|p</code>).</dd>
-        <dt><code>inner(selector)</code></dt>
-        <dd>Navigates to the terminal elements matching the selector within the current context.</dd>
-      </dl>
     </section>
-    
-    <section id="filtering-functions">
-      <h3>Hierarchical Filtering</h3>
-      <dl>
-        <dt><code>outermost(nodes)</code></dt>
-        <dd>From a set of <a>nodes</a>, keeps only those that are not contained within other <a>nodes</a> in the set.</dd>
-        <dt><code>innermost(nodes)</code></dt>
-        <dd>From a set of <a>nodes</a>, keeps only those that do not contain any other <a>nodes</a> from the set.</dd>
-      </dl>
-    </section>
-    
-    <section id="utility-functions">
-      <h3>Utility Functions</h3>
-      <dl>
-        <dt><code>only(elements)</code></dt><dd>Tests if the context contains only the specified elements.</dd>
-        <dt><code>text()</code></dt><dd>Returns the text content of a <a>node</a>.</dd>
-        <dt><code>count()</code></dt><dd>Returns the number of elements in a selection.</dd>
-        <dt><code>type()</code></dt><dd>Returns the <a data-lt="Node">node's</a> type (e.g., "element", "object", "string").</dd>
-        <dt><code>not(expr)</code></dt><dd>Negation of a predicate expression.</dd>
-      </dl>
-    </section>
-  </section>
   
   <section id="examples">
     <h2>Examples</h2>
