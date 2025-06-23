@@ -23,7 +23,7 @@
   <section id="abstract">
     <h2>Abstract</h2>
     <p>
-      The Unified Navigation Language (UNL) provides a single, coherent syntax to query, navigate, and transform data across multiple structured formats such as XML, JSON, CSV, and RDF. It draws inspiration from proven concepts like XPath and CSS selectors while introducing innovative features like optional navigation, built-in format transformation, advanced structural navigation functions, and a powerful sequence processing pipeline. The goal is to offer a single, intuitive language for all data formats.
+      The Unified Navigation Language (UNL) is designed as an embeddable query language. This specification describes its syntax, data model, and the necessary components of an execution environment for integration into a host programming language. UNL provides a single, coherent syntax to query, navigate, and transform data across multiple structured formats, including XML, JSON, CSV, and RDF.
     </p>
   </section>
 
@@ -68,12 +68,14 @@
               In this model, the UNL engine operates on a data structure that is already parsed and held in memory. The context can be a single root <a>Node</a> or a sequence of <a>Nodes</a>. The UNL query is an expression that navigates this existing structure directly. This corresponds to the <code>InMemoryQuery</code> production in the EBNF grammar.
           </p>
           <pre class="example">
-// Pseudo-code for a UNL library
+// context: Node(Object)
 let myJson = { "user": { "name": "John" } };
+// query: String
 let inMemoryQuery = "user/@name";
 
-// The engine executes the path against the in-memory object.
-let result = unl.run(myJson, inMemoryQuery); // result: "John"
+// unl.run(context: Node, query: String) → Sequence(Leaf)
+let result = unl.run(myJson, inMemoryQuery);
+// result is a Sequence containing one item: Leaf("John")
           </pre>
       </section>
       
@@ -89,16 +91,69 @@ let result = unl.run(myJson, inMemoryQuery); // result: "John"
             </p>
           </div>
           <pre class="example nohighlight">
-// The UNL query itself contains the resource locator.
+// query: String (A ResourceQuery)
 let resourceQuery = "data.csv|csv/*[1]/@price";
-let anotherQuery = "http://example.com/data.zip|decomp:zip/docs/report.xml|xml//title";
 
-// The engine identifies the resource locator, fetches and parses it,
-// then navigates the resulting structure.
-let result1 = unl.run(resourceQuery);
-let result2 = unl.run(anotherQuery);
+// unl.run(query: String) → Sequence(Leaf)
+let result = unl.run(resourceQuery);
+// result is a Sequence containing one item: Leaf("some_price")
           </pre>
       </section>
+  </section>
+
+  <section id="host-language-integration">
+    <h2>Host Language Integration</h2>
+    <p>
+        UNL is designed to be embedded within a host programming language (e.g., Python, JavaScript, Java). A UNL engine implementation <em class="rfc2119">MUST</em> be provided with an <strong>Execution Environment</strong> by the host. This environment supplies the context and configurations necessary to execute a query.
+    </p>
+    <p>The components of the Execution Environment are:</p>
+    <dl>
+        <dt>Initial Context</dt>
+        <dd>This is the data upon which the UNL query will run. It corresponds to one of the <a href="#execution-models">Operating Models</a>: either a pre-parsed object/node (for In-Memory Navigation) or a string/list of strings representing Resource Locators.</dd>
+        
+        <dt>Namespace Mappings</dt>
+        <dd>For queries involving prefixed QNames (e.g., <code>foaf:name</code>), the host environment <em class="rfc2119">MUST</em> provide a mapping of prefixes to their full namespace URI strings. This is typically a hash map or dictionary. The UNL engine uses this map to resolve EQNames.
+            <pre class="example">
+// Pseudo-code for providing a namespace map
+let namespaces = {
+  "foaf": "http://xmlns.com/foaf/0.1/",
+  "dc": "http://purl.org/dc/elements/1.1/"
+};
+unl.run(context, "/*[dc:creator = 'John']", { namespaces });
+            </pre>
+        </dd>
+
+        <dt>Variable Bindings (Optional)</dt>
+        <dd>To write secure and reusable queries, an implementation <em class="rfc2119">SHOULD</em> support external variable binding. Variables within a UNL query are denoted with a `$` prefix (e.g., <code>$username</code>). The host environment can provide a map of variable names to their literal values.
+            <pre class="example nohighlight">
+// Pseudo-code for variable binding
+let variables = {
+  "user_id": 123,
+  "min_size": 1024
+};
+unl.run(context, "users[@id = $user_id]", { variables });
+"archive.zip|decomp:zip/*[@size > $min_size]"
+            </pre>
+        </dd>
+
+        <dt>Custom Function Library (Optional)</dt>
+        <dd>For advanced extensibility, an implementation <em class="rfc2119">MAY</em> allow the host language to register custom functions. These functions, written in the host language, become callable from within UNL expressions, allowing for complex logic that goes beyond the standard function set.
+            <pre class="example">
+// Pseudo-code for registering and using a custom function
+function is_internal_email(email_string) {
+    return email_string.endsWith('@example.com');
+}
+
+unl.registerFunction("isInternal", is_internal_email);
+
+unl.run(context, "//user[isInternal(@email)]");
+            </pre>
+        </dd>
+    </dl>
+    <div class="note">
+        <h4>Note on `current()`</h4>
+        <p>A dedicated `current()` function is not necessary in UNL. The `.` operator always refers to the current context node at any point in a path, which serves the same purpose in a more concise, standard way.</p>
+    </div>
   </section>
   
   <section id="sequence-handling">
@@ -116,16 +171,16 @@ let result2 = unl.run(anotherQuery);
         <p>These operators can produce their result without needing to store the entire sequence in memory. They operate in the standard streaming pipeline.</p>
         <table>
             <thead>
-                <tr><th>Operator</th><th>Description</th></tr>
+                <tr><th>Operator</th><th>Description</th><th>Type Signature</th></tr>
             </thead>
             <tbody>
-                <tr><td><code>| head(n)</code></td><td>Takes the first <code>n</code> items from the stream and terminates the pipeline.</td></tr>
-                <tr><td><code>| tail(n)</code></td><td>Maintains a fixed-size buffer to output the last <code>n</code> items once the stream ends.</td></tr>
-                <tr><td><code>| count</code></td><td>Counts all items in the stream, using constant memory, and outputs a single leaf with the total at the end.</td></tr>
-                <tr><td><code>| sum</code></td><td>Calculates the sum of all items in a numeric stream.</td></tr>
-                <tr><td><code>| avg</code></td><td>Calculates the average of all items in a numeric stream.</td></tr>
-                <tr><td><code>| min</code></td><td>Finds the minimum value in a stream.</td></tr>
-                <tr><td><code>| max</code></td><td>Finds the maximum value in a stream.</td></tr>
+                <tr><td><code>| head(n)</code></td><td>Takes the first <code>n</code> items from the stream and terminates the pipeline.</td><td><code>Sequence(T) → Sequence(T)</code></td></tr>
+                <tr><td><code>| tail(n)</code></td><td>Maintains a fixed-size buffer to output the last <code>n</code> items once the stream ends.</td><td><code>Sequence(T) → Sequence(T)</code></td></tr>
+                <tr><td><code>| count</code></td><td>Counts all items in the stream and outputs a single leaf with the total at the end.</td><td><code>Sequence(T) → Leaf(Number)</code></td></tr>
+                <tr><td><code>| sum</code></td><td>Calculates the sum of all items in a numeric stream.</td><td><code>Sequence(Leaf(Number)) → Leaf(Number)</code></td></tr>
+                <tr><td><code>| avg</code></td><td>Calculates the average of all items in a numeric stream.</td><td><code>Sequence(Leaf(Number)) → Leaf(Number)</code></td></tr>
+                <tr><td><code>| min</code></td><td>Finds the minimum value in a stream of comparable items.</td><td><code>Sequence(T) → T</code></td></tr>
+                <tr><td><code>| max</code></td><td>Finds the maximum value in a stream of comparable items.</td><td><code>Sequence(T) → T</code></td></tr>
             </tbody>
         </table>
     </section>
@@ -139,12 +194,12 @@ let result2 = unl.run(anotherQuery);
         <p>These operators <em class="rfc2119">MUST</em> be preceded by the <code>||</code> barrier, as they require the entire sequence to be available to perform their work.</p>
         <table>
             <thead>
-                <tr><th>Operator</th><th>Description</th></tr>
+                <tr><th>Operator</th><th>Description</th><th>Type Signature</th></tr>
             </thead>
             <tbody>
-                <tr><td><code>| order-by(key)</code></td><td>Sorts the entire sequence based on a key expression. Direction (asc/desc) and type (numeric/text) can be specified.</td></tr>
-                <tr><td><code>| group-by(key)</code></td><td>Groups items in the sequence based on a key expression. Produces a sequence of group nodes.</td></tr>
-                <tr><td><code>| distinct</code></td><td>Removes duplicate items from the sequence.</td></tr>
+                <tr><td><code>| order-by(key)</code></td><td>Sorts the entire sequence based on a key expression.</td><td><code>Sequence(T) → Sequence(T)</code></td></tr>
+                <tr><td><code>| group-by(key)</code></td><td>Groups items in the sequence based on a key expression.</td><td><code>Sequence(T) → Sequence(Node(Group))</code></td></tr>
+                <tr><td><code>| distinct</code></td><td>Removes duplicate items from the sequence.</td><td><code>Sequence(T) → Sequence(T)</code></td></tr>
             </tbody>
         </table>
         <div class="note">
@@ -427,6 +482,7 @@ Q{http://xmlns.com/foaf/0.1/}Person/Q{http://xmlns.com/foaf/0.1/}knows
       <dl>
         <dt><code>only(elements)</code></dt><dd>Tests if the context contains only the specified elements.</dd>
         <dt><code>text()</code></dt><dd>Returns the text content of a <a>node</a>.</dd>
+        <dt><code>lang()</code></dt><dd>When used on a literal <a>leaf</a>, returns its language tag as a string.</dd>
         <dt><code>count()</code></dt><dd>Returns the number of elements in a selection.</dd>
         <dt><code>type()</code></dt><dd>Returns the <a data-lt="Node">node's</a> type (e.g., "element", "object", "string").</dd>
         <dt><code>not(expr)</code></dt><dd>Negation of a predicate expression.</dd>
@@ -436,33 +492,38 @@ Q{http://xmlns.com/foaf/0.1/}Person/Q{http://xmlns.com/foaf/0.1/}knows
   
   <section id="examples">
     <h2>Examples</h2>
-    <p>The following examples illustrate the two operating models.</p>
+    <p>The following examples illustrate the two operating models and advanced features.</p>
     
-    <section id="ex-in-memory">
-        <h3>In-Memory Mode Examples</h3>
-        <pre class="example">
-// Assumes 'doc' is a pre-parsed XML document object.
+    <section id="ex-basic">
+        <h3>Basic Examples</h3>
+        <pre class="example nohighlight">
+// In-Memory: Get an attribute from an XML node
 doc/book/@isbn
 
-// Assumes 'users' is a pre-parsed JSON array.
+// In-Memory: Get the name from the first object in a JSON array
 users[1]/@name
 
-// Assumes a pre-parsed RDF graph. Uses EQName for clarity.
-Q{http://example.org/ontology#}Person[1]/Q{http://xmlns.com/foaf/0.1/}name
+// Resource Loading: Get a column from a specific row in a CSV file
+data.csv|csv/*[@id="ABC"]/@name
+
+// Resource Loading: Navigate into a ZIP file to get an XML element
+http://example.com/data.zip|decomp:zip/docs/report.xml|xml//title
         </pre>
     </section>
     
-    <section id="ex-resource-loading">
-        <h3>Resource Loading Mode Examples</h3>
+    <section id="ex-advanced">
+        <h3>Advanced Examples</h3>
         <pre class="example nohighlight">
-// Query starts with a file path, followed by |csv to parse it into an array.
-data.csv|csv/*[@id="ABC"]/@name
+// Recursive Parsing: A leaf's value is piped into a new parser
+// Gets the 2nd tag from a comma-separated string within a CSV cell
+users.csv|csv/*[1]/@tags|csv/*[1]/@*[2]
 
-// Query starts with a full URI. Navigation to a file is by name.
-http://example.com/data.zip|decomp:zip/docs/report.xml|xml//title
+// API Chaining: A payload contains gzipped XML data
+// The query decodes, decompresses, and parses the data in one pipeline
+api/data|json/@payload|decode:base64|decomp:gz|xml//important
 
-// The wildcard selects file and directory nodes, which are then filtered by size.
-./archive.zip|decomp:zip/*[@size > 1000]|xml//important
+// Sequence Processing: Get all unique, sorted authors from a set of files
+"data/*.xml"|xml//author/text()||distinct|order-by(.)
         </pre>
     </section>
   </section>
@@ -478,6 +539,8 @@ http://example.com/data.zip|decomp:zip/docs/report.xml|xml//title
         <dd><a href="https://www.iso.org/standard/26153.html">Information technology — Syntactic metalanguage — Extended BNF</a>.</dd>
         <dt id="W3C-XML">W3C XML 1.0</dt>
         <dd><a href="https://www.w3.org/TR/xml/">Extensible Markup Language (XML) 1.0 (Fifth Edition)</a>, T. Bray, et al., W3C Recommendation, 26 November 2008.</dd>
+        <dt id="XML-INFOSET">XML-INFOSET</dt>
+        <dd><a href="https://www.w3.org/TR/xml-infoset/">XML Information Set (Second Edition)</a>, J. Cowan, et al., W3C Recommendation, 04 February 2004.</dd>
         <dt id="XML-NAMES">XML-NAMES</dt>
         <dd><a href="https://www.w3.org/TR/xml-names/">Namespaces in XML 1.0 (Third Edition)</a>, T. Bray, et al., W3C Recommendation, 8 December 2009.</dd>
         <dt id="XPATH-31">XPATH 3.1</dt>
@@ -524,7 +587,7 @@ http://example.com/data.zip|decomp:zip/docs/report.xml|xml//title
         <dd><a href="https://www.rfc-editor.org/info/rfc2045">Multipurpose Internet Mail Extensions (MIME) Part One: Format of Internet Message Bodies</a>, N. Freed & N. Borenstein, IETF, November 1996.</dd>
     </dl>
   </section>
-  
+
   <section id="conversion-paths" class="appendix">
     <h2>Common Transformation Paths</h2>
     <p>This appendix summarizes common data conversion pathways, showing the UNL operators used to transform an input representation into a desired output structure, as defined in the <a href="#data-mapping">Data Model Mapping</a> appendix.</p>
@@ -618,8 +681,9 @@ AndExpression      ::= EqualityExpression ( '&amp;' EqualityExpression )*
 EqualityExpression ::= RelationalExpression ( ( '=' | '!=' ) RelationalExpression )?
 RelationalExpression ::= PrimaryFilterExpr ( ( '&lt;' | '&gt;' | '&lt;=' | '&gt;=' | '~' ) PrimaryFilterExpr )*
 
-PrimaryFilterExpr  ::= Literal | FunctionCall | Path | LeafAccess | '!' FilterExpression | '(' FilterExpression ')' | Integer
+PrimaryFilterExpr  ::= Literal | Variable | FunctionCall | Path | LeafAccess | '!' FilterExpression | '(' FilterExpression ')' | Integer
 
+Variable           ::= '$' NCName
 FunctionCall       ::= NCName '(' ( FilterExpression ( ',' FilterExpression )* )? ')'
 
 (* Operator Definitions *)
@@ -652,17 +716,18 @@ Literal            ::= '"' ( [^"\\] | '\\' . )* '"' | "'" ( [^'\\] | '\\' . )* "
             <dd>The base type for any navigable structure. It has several specializations:
                 <ul>
                     <li><code>Node(Object)</code>: An unordered collection of key-value pairs, similar to a JSON object.</li>
-                    <li><code>Node(Array)</code>: An ordered collection of other Nodes or Leaves, similar to a JSON array or a set of CSV rows.</li>
-                    <li><code>Node(XML | HTML)</code>: A structure following the XML Infoset model, with elements, attributes, and text.</li>
+                    <li><code>Node(Array)</code>: An ordered collection of other Nodes or Leaves.</li>
+                    <li><code>Node(XML | HTML)</code>: A structure compliant with the [[XML-INFOSET]].</li>
                     <li><code>Node(Graph)</code>: A structure representing RDF triples.</li>
                     <li><code>Node(Archive)</code>: A virtual filesystem root, containing file and directory nodes.</li>
+                    <li><code>Node(Group)</code>: A special node produced by the <code>group-by</code> operator, containing a key and a sequence of items.</li>
                 </ul>
             </dd>
             <dt><code>Leaf</code></dt>
             <dd>The base type for any terminal, atomic value. It has several specializations:
                 <ul>
                     <li><code>Leaf(String)</code>: A Unicode string. This is the primary type for textual data.</li>
-                    <li><code>Leaf(Binary)</code>: A sequence of raw bytes. This is the primary type for non-textual data. It is the required input for binary operators like <code>decomp:</code>. Text-based parsers like <code>|xml</code> can also consume a <code>Leaf(Binary)</code> directly, attempting to auto-detect character encoding. The <code>|text</code> operator provides an explicit way to interpret binary data as text.</li>
+                    <li><code>Leaf(Binary)</code>: A sequence of raw bytes. This is the primary type for non-textual data. Text-based parsers like <code>|xml</code> can also consume a <code>Leaf(Binary)</code> directly by auto-detecting character encoding. The <code>|text</code> operator provides an explicit way to interpret binary data as text.</li>
                     <li><code>Leaf(Number)</code>, <code>Leaf(Boolean)</code>, <code>Leaf(Null)</code>: Primitive data types.</li>
                 </ul>
             </dd>
@@ -674,20 +739,19 @@ Literal            ::= '"' ( [^"\\] | '\\' . )* '"' | "'" ( [^'\\] | '\\' . )* "
     </section>
 
     <h3>XML</h3>
+    <p>The <code>|xml</code> transformation is a <strong>strict</strong> parser that produces a navigable structure compliant with the [[XML-INFOSET]]. It will fail on malformed documents.</p>
     <dl>
         <dt><a>Node</a></dt>
-        <dd>An XML Element. The document itself is the root node.</dd>
+        <dd>An XML Element.</dd>
         <dt><a>Leaf</a></dt>
-        <dd>An XML Attribute, or a Text node. The value of the attribute or text is the leaf's value.</dd>
+        <dd>An XML Attribute, or a Text node.</dd>
     </dl>
-    <pre class="example">
-&lt;!-- Data --&gt;
-&lt;book isbn="123-456"&gt;UNL Guide&lt;/book&gt;
-
-// UNL Queries
-book/@isbn     // Returns leaf "123-456"
-book/text()    // Returns leaf "UNL Guide"
-    </pre>
+    
+    <h3>HTML</h3>
+    <p>The <code>|html</code> transformation is a <strong>lenient</strong> parser that mimics browser behavior. It will attempt to fix errors and will always produce a navigable structure compliant with the [[XML-INFOSET]].</p>
+    <div class="note">
+        <p>From the perspective of subsequent UNL path navigation, a structure parsed from HTML is indistinguishable from one parsed from well-formed XML (like XHTML). The UNL engine operates on the unified Infoset model.</p>
+    </div>
 
     <h3>JSON</h3>
     <dl>
@@ -696,15 +760,7 @@ book/text()    // Returns leaf "UNL Guide"
         <dt><a>Leaf</a></dt>
         <dd>A value within an object or array that is a String, Number, Boolean, or Null.</dd>
     </dl>
-    <pre class="example">
-// Data
-{ "user": { "name": "Alice", "active": true } }
-
-// UNL Queries
-user/@name     // Returns leaf "Alice"
-user/@active   // Returns leaf true
-    </pre>
-
+    
     <h3>CSV</h3>
     <p>The <code>|csv</code> transformation parses data into an array of nodes. All indexing is 1-based.</p>
     <dl>
@@ -743,22 +799,34 @@ logs.csv|csv/*[1]/@*[2]                   // Returns leaf "ERROR"
         <dt><a>Node</a></dt>
         <dd>A resource identified by a URI or a Blank Node, when it acts as a subject or object of a triple.</dd>
         <dt><a>Leaf</a></dt>
-        <dd>A Literal value (e.g., a string, number, or date) that is an object of a triple.</dd>
+        <dd>A Literal value (e.g., a string, number, or date) that is the object of a triple. Literals are accessed via the <code>@</code> prefix followed by the EQName of the predicate.</dd>
     </dl>
     <pre class="example">
-// Data (in Turtle syntax)
-@prefix ex: &lt;http://example.org/&gt; .
+// --- Data (in Turtle syntax) ---
+@prefix : &lt;http://example.org/ns#&gt; .
 @prefix foaf: &lt;http://xmlns.com/foaf/0.1/&gt; .
+@prefix rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt; .
 
-ex:person1 a foaf:Person ;
-    foaf:name "Alice" .
+:book1 a :Book ;
+    rdfs:label "UNL Specification"@en ;
+    rdfs:label "Spécification UNL"@fr ;
+    foaf:maker :person1 .
 
-// UNL Query (In-Memory Mode, using EQNames)
-Q{http://xmlns.com/foaf/0.1/}Person/@name  // Returns leaf "Alice"
+:person1 a foaf:Person ;
+    foaf:name "John Doe" .
+    
+// --- UNL Queries (In-Memory Mode) ---
+// Note the use of @ followed by the full EQName of the property
+:book1/foaf:maker/@foaf:name
+// Returns leaf "John Doe"
+
+// Filter leaves based on their language tag using the lang() function
+:book1/@rdfs:label[lang()="fr"]
+// Returns leaf "Spécification UNL"
     </pre>
 
     <h3>Archives (zip, tar, etc.)</h3>
-    <p>Archives are treated as a virtual filesystem. Both files and directories are modeled as <a>Nodes</a> to allow querying their metadata.</p>
+    <p>Archives and local filesystems (via <code>|ls</code>) are treated as a virtual filesystem. Both files and directories are modeled as <a>Nodes</a> to allow querying their metadata.</p>
     <dl>
         <dt><a>Node</a></dt>
         <dd>A directory or a file. Directory nodes can contain other nodes. File nodes are terminal for path navigation but expose metadata leaves.</dd>
@@ -782,7 +850,7 @@ my_archive.zip|decomp:zip/docs/report.xml|xml//title
 my_archive.zip|decomp:zip/docs/report.xml/@size
 
 // Example 3: Filter files by metadata, then pipe their content.
-my_archive.zip|decomp:zip/*[@is_dir=false() and @size>1000]|xml//important
+./my_project/|ls/*[@is_dir=false() and @size>1000]|xml//important
     </pre>
 
   </section>
