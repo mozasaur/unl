@@ -80,7 +80,7 @@ let result = unl.run(myJson, inMemoryQuery); // result: "John"
       <section id="resource-loading-nav">
           <h3>Resource Loading and Navigation</h3>
           <p>
-              In this model, the UNL query begins with a <strong>Resource Locator</strong> (e.g., a file path or a full URI). This locator can be a single resource identifier or a pattern (e.g., a glob) that resolves to a sequence of resources. This locator is immediately followed by a mandatory transformation pipe (<code>|</code>) that instructs the engine how to fetch and parse the resource(s). This corresponds to the <code>ResourceQuery</code> production in the EBNF grammar.
+              In this model, the UNL query begins with a <strong>Resource Locator</strong>. This locator can be a single resource identifier (a file path or a URI) or a pattern (e.g., a glob) that resolves to a sequence of resources. This locator is immediately followed by a mandatory transformation pipe (<code>|</code>) that instructs the engine how to fetch and parse the resource(s). This corresponds to the <code>ResourceQuery</code> production in the EBNF grammar.
           </p>
           <div class="note">
             <h4>Important Note on Resource Locators</h4>
@@ -305,26 +305,26 @@ Q{http://xmlns.com/foaf/0.1/}Person/Q{http://xmlns.com/foaf/0.1/}knows
     </div>
     
     <h3>Data Serialization Formats</h3>
-    <p>These transformations parse a string-based <a href="#dfn-leaf">Leaf</a> or resource into a navigable <a>Node</a> structure.</p>
+    <p>These transformations parse a string-based or binary <a href="#dfn-leaf">Leaf</a> or resource into a navigable <a>Node</a> structure.</p>
     <table>
         <thead>
             <tr><th>Format</th><th>Description</th><th>Type Signature</th><th>Reference</th></tr>
         </thead>
         <tbody>
-            <tr><td><code>|xml</code></td><td>Extensible Markup Language.</td><td><code>Leaf(String) → Node(XML)</code></td><td><a href="#W3C-XML">W3C XML 1.0</a></td></tr>
-            <tr><td><code>|exi</code></td><td>Efficient XML Interchange (binary XML).</td><td><code>Leaf(Binary) → Node(XML)</code></td><td><a href="#W3C-EXI">W3C EXI 1.0</a></td></tr>
-            <tr><td><code>|json</code></td><td>JavaScript Object Notation.</td><td><code>Leaf(String) → Node(Object | Array)</code></td><td><a href="#RFC8259">RFC 8259</a></td></tr>
-            <tr><td><code>|csv</code></td><td>Comma-Separated Values.</td><td><code>Leaf(String) → Node(Array)</code></td><td><a href="#RFC4180">RFC 4180</a></td></tr>
-            <tr><td><code>|rdf</code></td><td>Resource Description Framework.</td><td><code>Leaf(String) → Node(Graph)</code></td><td><a href="#W3C-RDF11">W3C RDF 1.1</a></td></tr>
-            <tr><td><code>|html</code></td><td>HyperText Markup Language.</td><td><code>Leaf(String) → Node(HTML)</code></td><td><a href="#WHATWG-HTML">WHATWG HTML</a></td></tr>
-            <tr><td><code>|text</code></td><td>Plain text. Useful for converting binary leaves to strings.</td><td><code>Leaf(Binary) → Leaf(String)</code></td><td><a href="#RFC2046">RFC 2046</a></td></tr>
-            <tr><td><code>|yaml</code></td><td>YAML Ain't Markup Language.</td><td><code>Leaf(String) → Node(Object | Array)</code></td><td><a href="#YAML-SPEC">YAML 1.2.2</a></td></tr>
-            <tr><td><code>|toml</code></td><td>Tom's Obvious, Minimal Language.</td><td><code>Leaf(String) → Node(Object)</code></td><td><a href="#TOML-SPEC">TOML 1.0.0</a></td></tr>
+            <tr><td><code>|xml</code></td><td>Extensible Markup Language.</td><td><code>(ResourceLocator | Leaf(String | Binary)) → Node(XML)</code></td><td><a href="#W3C-XML">W3C XML 1.0</a></td></tr>
+            <tr><td><code>|exi</code></td><td>Efficient XML Interchange (binary XML).</td><td><code>(ResourceLocator | Leaf(Binary)) → Node(XML)</code></td><td><a href="#W3C-EXI">W3C EXI 1.0</a></td></tr>
+            <tr><td><code>|json</code></td><td>JavaScript Object Notation.</td><td><code>(ResourceLocator | Leaf(String | Binary)) → Node(Object | Array)</code></td><td><a href="#RFC8259">RFC 8259</a></td></tr>
+            <tr><td><code>|csv</code></td><td>Comma-Separated Values.</td><td><code>(ResourceLocator | Leaf(String | Binary)) → Node(Array)</code></td><td><a href="#RFC4180">RFC 4180</a></td></tr>
+            <tr><td><code>|rdf</code></td><td>Resource Description Framework.</td><td><code>(ResourceLocator | Leaf(String | Binary)) → Node(Graph)</code></td><td><a href="#W3C-RDF11">W3C RDF 1.1</a></td></tr>
+            <tr><td><code>|html</code></td><td>HyperText Markup Language.</td><td><code>(ResourceLocator | Leaf(String | Binary)) → Node(HTML)</code></td><td><a href="#WHATWG-HTML">WHATWG HTML</a></td></tr>
+            <tr><td><code>|text</code></td><td>Plain text. Forces a binary leaf to be interpreted as a string.</td><td><code>(ResourceLocator | Leaf(Binary)) → Leaf(String)</code></td><td><a href="#RFC2046">RFC 2046</a></td></tr>
+            <tr><td><code>|yaml</code></td><td>YAML Ain't Markup Language.</td><td><code>(ResourceLocator | Leaf(String | Binary)) → Node(Object | Array)</code></td><td><a href="#YAML-SPEC">YAML 1.2.2</a></td></tr>
+            <tr><td><code>|toml</code></td><td>Tom's Obvious, Minimal Language.</td><td><code>(ResourceLocator | Leaf(String | Binary)) → Node(Object)</code></td><td><a href="#TOML-SPEC">TOML 1.0.0</a></td></tr>
         </tbody>
     </table>
 
     <h3>Decompression (<code>decomp:</code> prefix)</h3>
-    <p>These transformations operate on a resource or a binary <a href="#dfn-leaf">Leaf</a>, decompressing it to expose a virtual filesystem of <a>Nodes</a>.</p>
+    <p>These transformations operate on a resource or a binary <a href="#dfn-leaf">Leaf</a>, decompressing it to expose a virtual filesystem of <a>Nodes</a> or a raw binary stream.</p>
     <table>
         <thead>
             <tr><th>Format</th><th>Description</th><th>Type Signature</th><th>Reference</th></tr>
@@ -332,13 +332,13 @@ Q{http://xmlns.com/foaf/0.1/}Person/Q{http://xmlns.com/foaf/0.1/}knows
         <tbody>
             <tr><td><code>|decomp:zip</code></td><td>ZIP file format.</td><td><code>(ResourceLocator | Leaf(Binary)) → Node(Archive)</code></td><td><a href="#PKWARE-ZIP">PKWARE ZIP</a></td></tr>
             <tr><td><code>|decomp:tar</code></td><td>Tape Archive.</td><td><code>(ResourceLocator | Leaf(Binary)) → Node(Archive)</code></td><td><a href="#POSIX-TAR">POSIX.1-2017</a></td></tr>
-            <tr><td><code>|decomp:gz</code></td><td>Gzip compression.</td><td><code>Leaf(Binary) → Leaf(Binary)</code></td><td><a href="#RFC1952">RFC 1952</a></td></tr>
+            <tr><td><code>|decomp:gz</code></td><td>Gzip compression.</td><td><code>(ResourceLocator | Leaf(Binary)) → Leaf(Binary)</code></td><td><a href="#RFC1952">RFC 1952</a></td></tr>
             <tr><td><code>|decomp:7z</code></td><td>7z archive format.</td><td><code>(ResourceLocator | Leaf(Binary)) → Node(Archive)</code></td><td><a href="#7Z-FORMAT">7-Zip Format</a></td></tr>
             <tr><td><code>|decomp:rar</code></td><td>Roshal Archive.</td><td><code>(ResourceLocator | Leaf(Binary)) → Node(Archive)</code></td><td>N/A</td></tr>
-            <tr><td><code>|decomp:xz</code></td><td>XZ compression.</td><td><code>Leaf(Binary) → Leaf(Binary)</code></td><td><a href="#XZ-SPEC">XZ Format</a></td></tr>
-            <tr><td><code>|decomp:bz2</code></td><td>Bzip2 compression.</td><td><code>Leaf(Binary) → Leaf(Binary)</code></td><td><a href="#BZIP2-SPEC">Bzip2 Format</a></td></tr>
-            <tr><td><code>|decomp:zstd</code></td><td>Zstandard compression.</td><td><code>Leaf(Binary) → Leaf(Binary)</code></td><td><a href="#RFC8878">RFC 8878</a></td></tr>
-            <tr><td><code>|decomp:brotli</code></td><td>Brotli compression.</td><td><code>Leaf(Binary) → Leaf(Binary)</code></td><td><a href="#RFC7932">RFC 7932</a></td></tr>
+            <tr><td><code>|decomp:xz</code></td><td>XZ compression.</td><td><code>(ResourceLocator | Leaf(Binary)) → Leaf(Binary)</code></td><td><a href="#XZ-SPEC">XZ Format</a></td></tr>
+            <tr><td><code>|decomp:bz2</code></td><td>Bzip2 compression.</td><td><code>(ResourceLocator | Leaf(Binary)) → Leaf(Binary)</code></td><td><a href="#BZIP2-SPEC">Bzip2 Format</a></td></tr>
+            <tr><td><code>|decomp:zstd</code></td><td>Zstandard compression.</td><td><code>(ResourceLocator | Leaf(Binary)) → Leaf(Binary)</code></td><td><a href="#RFC8878">RFC 8878</a></td></tr>
+            <tr><td><code>|decomp:brotli</code></td><td>Brotli compression.</td><td><code>(ResourceLocator | Leaf(Binary)) → Leaf(Binary)</code></td><td><a href="#RFC7932">RFC 7932</a></td></tr>
         </tbody>
     </table>
 
@@ -525,6 +525,58 @@ http://example.com/data.zip|decomp:zip/docs/report.xml|xml//title
     </dl>
   </section>
   
+  <section id="conversion-paths" class="appendix">
+    <h2>Common Transformation Paths</h2>
+    <p>This appendix summarizes common data conversion pathways, showing the UNL operators used to transform an input representation into a desired output structure, as defined in the <a href="#data-mapping">Data Model Mapping</a> appendix.</p>
+    
+    <section>
+        <h3>Producing a Navigable Node (e.g., XML, JSON)</h3>
+        <dl>
+            <dt>From a ResourceLocator</dt>
+            <dd><code>"my_data.json"|json/...</code></dd>
+            <dt>From a Leaf(String)</dt>
+            <dd><code>...@string_leaf|xml/...</code></dd>
+            <dt>From a Leaf(Binary)</dt>
+            <dd><code>...@binary_leaf|json/...</code> (Parser auto-detects encoding)</dd>
+            <dd><code>...@gzipped_json_leaf|decomp:gz|json/...</code> (Decompress then parse)</dd>
+        </dl>
+    </section>
+    
+    <section>
+        <h3>Producing a Navigable Archive Node</h3>
+        <dl>
+            <dt>From a ResourceLocator</dt>
+            <dd><code>"my_files.zip"|decomp:zip/...</code></dd>
+            <dt>From a Leaf(Binary)</dt>
+            <dd><code>...@binary_zip_leaf|decomp:zip/...</code></dd>
+        </dl>
+    </section>
+    
+    <section>
+        <h3>Producing a Leaf(String)</h3>
+        <dl>
+            <dt>From a ResourceLocator</dt>
+            <dd><code>"my_file.txt"|text</code></dd>
+            <dt>From a Leaf(Binary)</dt>
+            <dd><code>...@binary_leaf|text</code></dd>
+            <dt>From a Node</dt>
+            <dd><code>.../my_node|text</code> (Serializes the node to its default text representation, e.g., outer XML)</dd>
+        </dl>
+    </section>
+
+    <section>
+        <h3>Producing a Leaf(Binary)</h3>
+        <dl>
+            <dt>From a ResourceLocator</dt>
+            <dd>This is the default interpretation of a resource locator before any pipe is applied.</dd>
+            <dt>From a Leaf(String)</dt>
+            <dd><code>...@string_leaf|decode:base64</code></dd>
+            <dt>From a Node</dt>
+            <dd><code>.../my_node|exi</code> (Serializes an XML node to binary EXI format)</dd>
+        </dl>
+    </section>
+  </section>
+  
   <section id="ebnf-grammar" class="appendix">
     <h2>EBNF Grammar for UNL v1.0</h2>
     <p>This appendix provides a non-normative grammar for the Unified Navigation Language, with a syntax conforming to the EBNF standard [[ISO-IEC-14977]].</p>
@@ -609,8 +661,8 @@ Literal            ::= '"' ( [^"\\] | '\\' . )* '"' | "'" ( [^'\\] | '\\' . )* "
             <dt><code>Leaf</code></dt>
             <dd>The base type for any terminal, atomic value. It has several specializations:
                 <ul>
-                    <li><code>Leaf(String)</code>: A Unicode string. This is the most common leaf type.</li>
-                    <li><code>Leaf(Binary)</code>: A sequence of raw bytes. This type is not directly inspectable and <em class="rfc2119">MUST</em> be piped to another transformation (e.g., <code>|text</code>, <code>|decomp:gz</code>, or <code>|xml</code>) to be useful.</li>
+                    <li><code>Leaf(String)</code>: A Unicode string. This is the primary type for textual data.</li>
+                    <li><code>Leaf(Binary)</code>: A sequence of raw bytes. This is the primary type for non-textual data. It is the required input for binary operators like <code>decomp:</code>. Text-based parsers like <code>|xml</code> can also consume a <code>Leaf(Binary)</code> directly, attempting to auto-detect character encoding. The <code>|text</code> operator provides an explicit way to interpret binary data as text.</li>
                     <li><code>Leaf(Number)</code>, <code>Leaf(Boolean)</code>, <code>Leaf(Null)</code>: Primitive data types.</li>
                 </ul>
             </dd>
